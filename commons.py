@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import chaospy as cp
+from itertools import product
 
 
 base_sampling_time = 0.1
@@ -69,40 +70,29 @@ def bicycle_linear_model(xi, u, xi_0, delta_t, l):
     return next_xi
 
 
-def gen_pce_matrix(zeta_hat, mu, psi, xi_0, a_hat):
+def gen_pce_matrix(zeta_hat, psi, xi_0, a_hat):
 
     A, B = gen_linear_matrix(xi_0)
 
     b_hat = a_hat
 
-    Bb 
+    Bb = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]])
+                   for s in range(zeta_hat.shape[0])])
 
-    for s in range(zeta_hat.shape[0]):
+    Ab = np.array([[sum([np.inner(a_hat[i], psi[s][j]) * A[i] for i in [0, 1]])
+                    for j in range(zeta_hat.shape[1])]
+                   for s in range(zeta_hat.shape[0])])
 
-        Bb = sum([b_hat[i][s] * B[i] for i in [0, 1]])
-
-        zeta_hat_next[s] = zeta_hat[s] + np.dot(Bb, mu)
-        for j in range(zeta_hat.shape[1]):
-            Ab = sum([np.inner(a_hat[i], psi[s][j]) * A[i] for i in [0, 1]])
-            zeta_hat_next[s] += np.dot(Ab, zeta_hat[j])
     return Ab, Bb
 
 
 def pce_model(zeta_hat, mu, psi, xi_0, a_hat):
 
-    zeta_hat_next = np.zeros(zeta_hat.shape)
-    A, B = gen_linear_matrix(xi_0)
+    Ab, Bb = gen_pce_matrix(zeta_hat, psi, xi_0, a_hat)
 
-    b_hat = a_hat
+    zeta_hat_next = np.array([zeta_hat[s] + sum([np.dot(Ab[s][j], zeta_hat[j]) for j in range(zeta_hat.shape[1])])
+                              + np.dot(Bb[s], mu) for s in range(zeta_hat.shape[0])])
 
-    for s in range(zeta_hat.shape[0]):
-
-        Bb = sum([b_hat[i][s] * B[i] for i in [0, 1]])
-
-        zeta_hat_next[s] = zeta_hat[s] + np.dot(Bb, mu)
-        for j in range(zeta_hat.shape[1]):
-            Ab = sum([np.inner(a_hat[i], psi[s][j]) * A[i] for i in [0, 1]])
-            zeta_hat_next[s] += np.dot(Ab, zeta_hat[j])
     return zeta_hat_next
 
 

@@ -33,16 +33,16 @@ mc_samples_linear = np.array([monte_carlo_linear_bicycle(N, zeta_0, u, node[0], 
 
 
 # Draw plots: mean
-'''
+
 pyplot.plot(np.linspace(0, 1, N+1), get_mean_from_pce(zeta_hat).T[1])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
-'''
+
 
 # Draw plots: variance
-
-pyplot.plot(np.linspace(0, 1, N+1), get_var_from_pce(zeta_hat, basis, eta).T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples_linear, 0).T[1])
-
+'''
+pyplot.plot(np.linspace(0, 1, N+1), get_var_from_pce(zeta_hat, basis, eta).T[0])
+pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[0])
+pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples_linear, 0).T[0])
+'''
 pyplot.show()
