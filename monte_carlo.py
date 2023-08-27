@@ -7,22 +7,7 @@ from matplotlib import pyplot
 N = 10
 
 
-def monte_carlo_bicycle(state_0, input_0, control, delta_t, length):
 
-    samples = np.zeros([N + 1, 4])
-    samples[0] = state_0
-    for k in range(N):
-        samples[k+1] = bicycle_model(samples[k], control[k], delta_t, length)
-    return samples
-
-
-def monte_carlo_linear_bicycle(state_0, input_0, control, delta_t, length):
-
-    samples = np.zeros([N + 1, 4])
-    samples[0] = state_0
-    for k in range(N):
-        samples[k+1] = bicycle_linear_model(samples[k], control[k], state_0, input_0, delta_t, length)
-    return samples
 
 
 M = 64
@@ -42,10 +27,14 @@ u = np.array([gamma, a]).T
 mc_samples = np.array([monte_carlo_bicycle(zeta_0, u[0], u, node[0], node[1]) for node in nodes.T])
 mc_samples_linear = np.array([monte_carlo_linear_bicycle(zeta_0, u[0], u, node[0], node[1]) for node in nodes.T])
 
-for j in range(M):
-    pyplot.plot(np.linspace(0, 1, N+1), mc_samples[j].T[1])
+#for j in range(M):
+#    pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples[j].T[1], 0))
+
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
 
 #for j in range(M):
-#    pyplot.plot(np.linspace(0, 1, N+1), mc_samples_linear[j].T[1])
+#    pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear[j].T[1], 0))
+
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
 
 pyplot.show()

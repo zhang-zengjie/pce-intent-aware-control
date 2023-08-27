@@ -1,6 +1,5 @@
 import math
 import numpy as np
-from itertools import product
 import chaospy as cp
 
 
@@ -12,31 +11,31 @@ tau = cp.Trunc(cp.Normal(base_sampling_time, 0.01), lower=base_sampling_time - 0
 eta = cp.J(tau, length)
 
 
-def gen_linear_matrix(xi_0, u_0):
-    theta0, v0 = 0, xi_0[3]
+def gen_linear_matrix(xi_0):
+    theta0, v0 = xi_0[2], xi_0[3]
     gamma0 = 0
 
-    A1 = np.array([[0, 0, - v0 * math.sin(theta0 + gamma0), math.cos(theta0 + gamma0)],
-                   [0, 0, v0 * math.cos(theta0 + gamma0), math.sin(theta0 + gamma0)],
-                   [0, 0, 0, 0],
-                   [0, 0, 0, 0]])
+    A1 = [[0, 0, - v0 * math.sin(theta0 + gamma0), math.cos(theta0 + gamma0)],
+          [0, 0, v0 * math.cos(theta0 + gamma0), math.sin(theta0 + gamma0)],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]]
 
-    A2 = np.array([[0, 0, 0, 0],
-                   [0, 0, 0, 0],
-                   [0, 0, 0, math.sin(gamma0)],
-                   [0, 0, 0, 0]])
+    A2 = [[0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, math.sin(gamma0)],
+          [0, 0, 0, 0]]
 
-    B1 = np.array([[- v0 * math.sin(theta0 + gamma0), 0],
-                   [v0 * math.cos(theta0 + gamma0), 0],
-                   [0, 0],
-                   [0, 1]])
+    B1 = [[- v0 * math.sin(theta0 + gamma0), 0],
+          [v0 * math.cos(theta0 + gamma0), 0],
+          [0, 0],
+          [0, 1]]
 
-    B2 = np.array([[0, 0],
-                   [0, 0],
-                   [v0 * math.cos(gamma0), 0],
-                   [0, 0]])
+    B2 = [[0, 0],
+          [0, 0],
+          [v0 * math.cos(gamma0), 0],
+          [0, 0]]
 
-    return A1, A2, B1, B2
+    return np.array([A1, A2]), np.array([B1, B2])
 
 
 def gen_linear_scalar(delta_t, l):
@@ -45,7 +44,7 @@ def gen_linear_scalar(delta_t, l):
     a2 = delta_t/l
     b2 = delta_t/l
 
-    return a1, a2, b1, b2
+    return (a1, a2), (b1, b2)
 
 
 def bicycle_model(xi, u, delta_t, l):
@@ -58,46 +57,80 @@ def bicycle_model(xi, u, delta_t, l):
     return x, y, theta, v
 
 
-def bicycle_linear_model(xi, u, xi_0, u_0, delta_t, l):
+def bicycle_linear_model(xi, u, xi_0, delta_t, l):
 
-    A1, A2, B1, B2 = gen_linear_matrix(xi_0, u_0)
-    a1, a2, b1, b2 = gen_linear_scalar(delta_t, l)
+    A, B = gen_linear_matrix(xi_0)
+    a, b = gen_linear_scalar(delta_t, l)
 
-    A = a1 * A1 + a2 * A2
-    B = b1 * B1 + b2 * B2
+    Am = sum([a[i] * A[i] for i in [0, 1]])
+    Bm = sum([b[i] * B[i] for i in [0, 1]])
 
-    next_xi = xi + np.dot(A, xi) + np.dot(B, u)
+    next_xi = xi + np.dot(Am, xi) + np.dot(Bm, u)
     return next_xi
 
 
-def pce_model(zeta_hat, mu, psi, xi_0, u_0, a_hat):
+def gen_pce_matrix(zeta_hat, mu, psi, xi_0, a_hat):
 
-    zeta_hat_next = zeta_hat
-    A1, A2, B1, B2 = gen_linear_matrix(xi_0, u_0)
+    A, B = gen_linear_matrix(xi_0)
 
-    a1_hat = a_hat[0]
-    a2_hat = a_hat[1]
+    b_hat = a_hat
 
-    b1_hat = a1_hat
-    b2_hat = a2_hat
-
-    e1_hat = a1_hat
-    e2_hat = a2_hat
-    e3_hat = b1_hat
-    e4_hat = b2_hat
-
-    E1 = - np.dot(A1, xi_0)
-    E2 = - np.dot(A2, xi_0)
-    E3 = - np.dot(B1, u_0)
-    E4 = - np.dot(B2, u_0)
+    Bb 
 
     for s in range(zeta_hat.shape[0]):
 
-        B = b1_hat[s] * B1 + b2_hat[s] * B2
-        E = e1_hat[s] * E1 + e2_hat[s] * E2 + e3_hat[s] * E3 + e4_hat[s] * E4
+        Bb = sum([b_hat[i][s] * B[i] for i in [0, 1]])
 
-        zeta_hat_next[s] = zeta_hat[s] + np.dot(B, mu) + E
+        zeta_hat_next[s] = zeta_hat[s] + np.dot(Bb, mu)
         for j in range(zeta_hat.shape[1]):
-            A = np.inner(a1_hat, psi[s][j]) * A1 + np.inner(a2_hat, psi[s][j]) * A2
-            zeta_hat_next[s] += np.dot(A, zeta_hat[j])
+            Ab = sum([np.inner(a_hat[i], psi[s][j]) * A[i] for i in [0, 1]])
+            zeta_hat_next[s] += np.dot(Ab, zeta_hat[j])
+    return Ab, Bb
+
+
+def pce_model(zeta_hat, mu, psi, xi_0, a_hat):
+
+    zeta_hat_next = np.zeros(zeta_hat.shape)
+    A, B = gen_linear_matrix(xi_0)
+
+    b_hat = a_hat
+
+    for s in range(zeta_hat.shape[0]):
+
+        Bb = sum([b_hat[i][s] * B[i] for i in [0, 1]])
+
+        zeta_hat_next[s] = zeta_hat[s] + np.dot(Bb, mu)
+        for j in range(zeta_hat.shape[1]):
+            Ab = sum([np.inner(a_hat[i], psi[s][j]) * A[i] for i in [0, 1]])
+            zeta_hat_next[s] += np.dot(Ab, zeta_hat[j])
     return zeta_hat_next
+
+
+def monte_carlo_bicycle(horizon, state_0, control, delta_t, leng):
+
+    samples = np.zeros([horizon + 1, 4])
+    samples[0] = state_0
+    for k in range(horizon):
+        samples[k+1] = bicycle_model(samples[k], control[k], delta_t, leng)
+    return samples
+
+
+def monte_carlo_linear_bicycle(horizon, state_0, control, delta_t, leng):
+
+    samples = np.zeros([horizon + 1, 4])
+    samples[0] = state_0
+    for k in range(horizon):
+        samples[k+1] = bicycle_linear_model(samples[k], control[k], state_0, delta_t, leng)
+    return samples
+
+
+def gen_pce_coefficients(horizon, state_0, control, psi, a_hat):
+
+    L = a_hat.shape[1]
+    zeta_hat = np.zeros([horizon + 1, L, 4])
+    zeta_hat[0][0] = state_0
+
+    for k in range(horizon):
+        zeta_hat[k+1] = pce_model(zeta_hat[k], control[k], psi, state_0, a_hat)
+
+    return zeta_hat
