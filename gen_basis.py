@@ -2,6 +2,7 @@ import numpy as np
 import chaospy as cp
 from itertools import product
 from commons import eta
+import numpoly
 
 
 p = 3
@@ -21,4 +22,5 @@ for s, j, i in product(range(L), range(L), range(L)):
     Psi[s][j][i] = cp.E(basis[s]*basis[j]*basis[i], eta)/cp.E(basis[s]*basis[s], eta)
 
 np.save('psi.npy', Psi)
+numpoly.save('basis.npy', basis)
 np.save('a_hat.npy', np.array([a1_hat, a2_hat]))
