@@ -51,7 +51,7 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, sys_info, x0, T, M=1000, robustness_cost=True,
+    def __init__(self, spec, psi, a_hat, x0, T, M=1000, robustness_cost=True,
                  presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
         super().__init__(spec, None, x0, T, verbose)
@@ -77,7 +77,7 @@ class PCEMICPSolver(STLSolver):
 
         # Create optimization variables
 
-        self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
+        self.x = self.model.addMVar((a_hat.shape[1], self.T), lb=-float('inf'), name='x')
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
