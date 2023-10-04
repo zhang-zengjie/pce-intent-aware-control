@@ -10,7 +10,7 @@ psi = np.load('psi.npy')
 basis = numpoly.load('basis.npy')
 L = a_hat.shape[1]
 
-N = 10
+N = 20
 x0 = 0
 y0 = 0
 theta0 = 0
