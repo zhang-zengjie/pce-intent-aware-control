@@ -10,3 +10,5 @@ Python=3.10
 - `pip install importlib-metadata`
 - `conda install -c conda-forge importlib_metadata`
 - `conda install -c conda-forge numpoly`
+
+Run `compare_statistics.py` to compare PCE and Monte Carlo
