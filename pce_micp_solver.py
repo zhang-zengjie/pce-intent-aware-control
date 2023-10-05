@@ -5,6 +5,9 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 
+from commons import pce_model, bicycle_linear_model
+from commons import base_length, base_sampling_time
+
 import time
 
 
@@ -51,13 +54,17 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, psi, a_hat, x0, T, M=1000, robustness_cost=True,
-                 presolve=True, verbose=True):
+    def __init__(self, spec, Psi, A_hat, xi_ego_0, xi_obs_0, u_ego_0, u_obs, T, M=1000, 
+                 robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
-        super().__init__(spec, None, x0, T, verbose)
+        super().__init__(spec, None, xi_ego_0, T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
+
+        self.xi_obs_0 = xi_obs_0
+        self.u_ego_0 = u_ego_0
+        self.u_obs = u_obs
 
         # Set up the optimization problem
         self.model = gp.Model("STL_MICP")
@@ -77,12 +84,15 @@ class PCEMICPSolver(STLSolver):
 
         # Create optimization variables
 
-        self.x = self.model.addMVar((a_hat.shape[1], self.T), lb=-float('inf'), name='x')
-        self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
+        self.xi_e = self.model.addMVar((self.T, xi_ego_0.shape[0]), lb=-float('inf'), name='xi ego')
+        self.xi_o = self.model.addMVar((self.T, A_hat.shape[1], xi_ego_0.shape[0]), lb=-float('inf'), name='xi obstacle')
+        self.u = self.model.addMVar((u0.shape[0], self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
         # Add cost and constraints to the optimization problem
-        self.AddDynamicsConstraints()
+        self.AddDynamicsConstraints(Psi, A_hat)
+        self.AddControlBounds()
+        self.AddStateBounds()
         self.AddSTLConstraints()
         self.AddRobustnessConstraint()
         if robustness_cost:
@@ -143,21 +153,19 @@ class PCEMICPSolver(STLSolver):
 
         return (x, u, rho, self.model.Runtime)
 
-    def AddDynamicsConstraints(self):
+    def AddDynamicsConstraints(self, Psi, a_hat):
         # Initial condition
-        self.model.addConstr(self.x[:, 0] == self.x0)
+        self.model.addConstr(self.xi_e[0] == self.x0)
+        self.model.addConstr(self.xi_o[0][0] == self.xi_obs_0)
+
+        for i in range(a_hat.shape[1]-1):
+            self.model.addConstr(self.xi_o[0][i + 1] == np.zeros(self.x0.shape))
 
         # Dynamics
         for t in range(self.T - 1):
-            self.model.addConstr(
-                self.x[:, t + 1] == self.sys.A @ self.x[:, t] + self.sys.B @ self.u[:, t])
-
-            self.model.addConstr(
-                self.y[:, t] == self.sys.C @ self.x[:, t] + self.sys.D @ self.u[:, t])
-
-        self.model.addConstr(
-            self.y[:, self.T - 1] == self.sys.C @ self.x[:, self.T - 1] + self.sys.D @ self.u[:, self.T - 1])
-
+            self.xi_e[t + 1] == bicycle_linear_model(self.xi_e[t], self.u[t], self.x0, base_sampling_time, base_length)
+            self.xi_o[t + 1] == pce_model(self.xi_o[t], self.u_obs[t], Psi, self.x0, a_hat)
+            
     def AddSTLConstraints(self):
         """
         Add the STL constraints

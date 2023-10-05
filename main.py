@@ -26,4 +26,4 @@ u = np.array([gamma, a]).T
 zeta_hat = gen_pce_coefficients(N, zeta_0, u, psi, a_hat)
 
 
-solver = PCEMICPSolver(spec, psi, a_hat, x0, N, robustness_cost=True)
+solver = PCEMICPSolver(spec, psi, a_hat, x0, u_0=np.numpy([0, 0]), T=N, robustness_cost=True)
