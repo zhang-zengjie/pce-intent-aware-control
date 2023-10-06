@@ -4,6 +4,7 @@ from commons import eta, gen_pce_coefficients, monte_carlo_linear_bicycle, monte
 from statistic import get_var_from_pce, get_mean_from_pce
 from matplotlib import pyplot
 from pce_micp_solver import PCEMICPSolver
+from commons N
 
 
 a_hat = np.load('a_hat.npy')
@@ -11,7 +12,7 @@ psi = np.load('psi.npy')
 basis = numpoly.load('basis.npy')
 L = a_hat.shape[1]
 
-N = 10
+
 x0 = 0
 y0 = 0
 theta0 = 0

@@ -1,7 +1,14 @@
 import numpy as np
 from stlpy.STL import LinearPredicate
+import chaospy as cp
+from commons import eta
+import numpoly
+import math
 
-def probability_formula(a, c, b, eps, Phi, name=None):
+basis = numpoly.load('basis.npy')
+
+
+def probability_formula(a, c, b, eps, name=None):
     """
     Create STL formulas representing the chance constraint:
 
@@ -9,8 +16,8 @@ def probability_formula(a, c, b, eps, Phi, name=None):
 
     This chance constraint can be converted to 
 
-    a'x_t + c'z_t^0 ± coef_i z_t^i -b >=0     for all i=1, 2, ..., L-1
-    given coef_i = sqrt((1-eps)/eps) * (L-1) * sqrt(E(Phi_i^2))
+    a'x_t + c'z_t^0 ± coef_i c'z_t^i -b >=0     for all i=1, 2, ..., L-1
+    given coef_i = sqrt((1-eps)/eps * (L-1) * E(Phi_i^2))
 
     :param a:           coefficient vector 
     :param c:           coefficient vector 
@@ -23,29 +30,30 @@ def probability_formula(a, c, b, eps, Phi, name=None):
                         specifications.
     """
 
-    L = coef.shape[0]
+    L = basis.shape[0]
+    coef = np.array([math.sqrt((1 - eps) * (L-1) * cp.E(basis[k] ** 2, eta) / eps) for k in range(1, L)])
+
     d = a.shape[0]
-    e = np.ones((d, ))
 
     assert (a.shape[1] == 1), "a must be of shape (d,1)"
     assert (c.shape[1] == 1), "c must be of shape (d,1)"
     assert (b.shape == (1,)), "b must be of shape (1,)"
 
-    pre_mat = np.zeros((L, d))
+    pre_mat = np.zeros((L + 1, d))
     pre_mat[0] = a
     pre_mat[1] = c
 
     formula = True
 
-    for i in range(L-1):
-        pre_mat[i+1] = coef[i+1] * e
+    for i in range(1, L):
+        pre_mat[i + 1] = coef[i - 1] * c
         formula &= LinearPredicate(pre_mat.flatten, b)
-        pre_mat[i+1] = - coef[i+1] * e
+        pre_mat[i + 1] = - coef[i - 1] * c
         formula &= LinearPredicate(pre_mat.flatten, b)
 
     return formula
 
-def expecation_formula(a, c, b, Psi, name=None):
+def expecation_formula(a, c, b, name=None):
     """
     Create STL formulas representing the expectation constraint:
 
@@ -66,15 +74,14 @@ def expecation_formula(a, c, b, Psi, name=None):
                         specifications.
     """
 
-    L = coef.shape[0]
+    L = basis.shape[0]
     d = a.shape[0]
-    e = np.ones((d, ))
 
     assert (a.shape[1] == 1), "a must be of shape (d,1)"
     assert (c.shape[1] == 1), "c must be of shape (d,1)"
     assert (b.shape == (1,)), "b must be of shape (1,)"
 
-    pre_mat = np.zeros((L, d))
+    pre_mat = np.zeros((L + 1, d))
     pre_mat[0] = a
     pre_mat[1] = c
 
@@ -82,7 +89,7 @@ def expecation_formula(a, c, b, Psi, name=None):
 
     return formula
 
-def variant_formula(a, c, b, Psi, name=None):
+def variance_formula(c, b, name=None):
     """
     Create STL formulas representing the expectation constraint:
 
@@ -90,8 +97,8 @@ def variant_formula(a, c, b, Psi, name=None):
 
     This chance constraint can be converted to 
 
-    -b <= coef_i z_t^i <= b     for all i=1, 2, ..., L-1
-    given coef_i = sqrt((1-eps)/eps) * (L-1) * sqrt(E(Phi_i^2))
+    -b <= coef_i c'z_t^i <= b     for all i=1, 2, ..., L-1
+    given coef_i = sqrt((L-1) * E(Phi_i^2))
 
     :param a:           coefficient vector 
     :param c:           coefficient vector 
@@ -104,24 +111,22 @@ def variant_formula(a, c, b, Psi, name=None):
                         specifications.
     """
 
-    L = coef.shape[0]
-    d = a.shape[0]
-    e = np.ones((d, ))
+    L = basis.shape[0]
+    coef = np.array([math.sqrt((L-1) * cp.E(basis[k] ** 2, eta)) for k in range(1, L)])
 
-    assert (a.shape[1] == 1), "a must be of shape (d,1)"
+    d = c.shape[0]
+
     assert (c.shape[1] == 1), "c must be of shape (d,1)"
     assert (b.shape == (1,)), "b must be of shape (1,)"
 
-    pre_mat = np.zeros((L, d))
-    pre_mat[0] = a
-    pre_mat[1] = c
+    pre_mat = np.zeros(L + 1, d)
 
     formula = True
 
     for i in range(L-1):
-        pre_mat[i+1] = coef[i+1] * e
+        pre_mat[i + 1] = coef[i - 1] * c
         formula &= LinearPredicate(pre_mat.flatten, b)
-        pre_mat[i+1] = - coef[i+1] * e
+        pre_mat[i + 1] = - coef[i - 1] * c
         formula &= LinearPredicate(pre_mat.flatten, b)
 
     return formula
