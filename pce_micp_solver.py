@@ -5,10 +5,15 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 
-from commons import pce_model, bicycle_linear_model
-from commons import base_length, base_sampling_time
+from commons import pce_model, gen_pce_matrix
 
 import time
+import numpoly
+
+
+a_hat = np.load('a_hat.npy')
+psi = np.load('psi.npy')
+basis = numpoly.load('basis.npy')
 
 
 class PCEMICPSolver(STLSolver):
@@ -54,20 +59,21 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, Psi, A_hat, xi_ego_0, xi_obs_0, u_ego_0, u_obs, T, M=1000, 
+    def __init__(self, spec, sys, x0, z0, v, T, M=1000, 
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
-        super().__init__(spec, None, xi_ego_0, T, verbose)
+        super().__init__(spec, sys, x0, T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
 
-        self.xi_obs_0 = xi_obs_0
-        self.u_ego_0 = u_ego_0
-        self.u_obs = u_obs
+        self.z0 = z0
+        self.L = psi.shape[0]
+        self.v = v
+        
 
         # Set up the optimization problem
-        self.model = gp.Model("STL_MICP")
+        self.model = gp.Model("PCE_STL_MICP")
 
         # Store the cost function, which will added to self.model right before solving
         self.cost = 0.0
@@ -84,15 +90,15 @@ class PCEMICPSolver(STLSolver):
 
         # Create optimization variables
 
-        self.xi_e = self.model.addMVar((self.T, xi_ego_0.shape[0]), lb=-float('inf'), name='xi ego')
-        self.xi_o = self.model.addMVar((self.T, A_hat.shape[1], xi_ego_0.shape[0]), lb=-float('inf'), name='xi obstacle')
-        self.u = self.model.addMVar((u0.shape[0], self.T), lb=-float('inf'), name='u')
+        self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
+        self.z = self.model.addMVar((self.L, self.sys.n, self.T), lb=-float('inf'), name='z')
+        self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
+
         # Add cost and constraints to the optimization problem
-        self.AddDynamicsConstraints(Psi, A_hat)
-        self.AddControlBounds()
-        self.AddStateBounds()
+        self.AddDynamicsConstraints()
+        self.AddPCEDynamicsConstraints()
         self.AddSTLConstraints()
         self.AddRobustnessConstraint()
         if robustness_cost:
@@ -153,19 +159,28 @@ class PCEMICPSolver(STLSolver):
 
         return (x, u, rho, self.model.Runtime)
 
-    def AddDynamicsConstraints(self, Psi, a_hat):
+    def AddDynamicsConstraints(self):
         # Initial condition
-        self.model.addConstr(self.xi_e[0] == self.x0)
-        self.model.addConstr(self.xi_o[0][0] == self.xi_obs_0)
-
-        for i in range(a_hat.shape[1]-1):
-            self.model.addConstr(self.xi_o[0][i + 1] == np.zeros(self.x0.shape))
+        self.model.addConstr( self.x[:,0] == self.x0 )
 
         # Dynamics
         for t in range(self.T - 1):
-            self.xi_e[t + 1] == bicycle_linear_model(self.xi_e[t], self.u[t], self.x0, base_sampling_time, base_length)
-            self.xi_o[t + 1] == pce_model(self.xi_o[t], self.u_obs[t], Psi, self.x0, a_hat)
+            self.model.addConstr( self.x[:,t+1] == self.sys.A@self.x[:,t] + self.sys.B@self.u[:,t] )
             
+    def AddPCEDynamicsConstraints(self):
+
+        # Initial condition
+        self.model.addConstr(self.z[0, :, 0] == self.z0)
+        for i in range(1, self.L):
+            self.model.addConstr(self.z[i, :, 0] == np.zeros((self.sys.n, )))
+
+        # Dynamics
+        for t in range(self.T - 1):
+            Ab, Bb = gen_pce_matrix( self.z[:, :, t], psi, self.z0, a_hat )
+            for s in range(self.L):
+                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([Ab[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + Bb[s] @ self.v[:, t] )
+
+
     def AddSTLConstraints(self):
         """
         Add the STL constraints
@@ -212,8 +227,9 @@ class PCEMICPSolver(STLSolver):
         """
         # We're at the bottom of the tree, so add the big-M constraints
         if isinstance(formula, LinearPredicate):
-            # a.T*y - b + (1-z)*M >= rho
-            self.model.addConstr(formula.a.T @ self.y[:, t] - formula.b + (1 - z) * self.M >= self.rho)
+            # a.T*x_t + c.T*_hat{z}_t - b + (1-z)*M >= rho
+
+            self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.z[:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
 
             # Force z to be binary
             b = self.model.addMVar(1, vtype=GRB.BINARY)

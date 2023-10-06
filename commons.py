@@ -2,20 +2,7 @@ import math
 import numpy as np
 import chaospy as cp
 from itertools import product
-
-N = 20
-base_sampling_time = 0.1
-base_length = 5
-
-lanes = {'right': 0,
-         'slow': 1.2,
-         'middle': 2.4,
-         'fast': 1.8,
-         'left': 4.8}
-
-length = cp.Trunc(cp.Normal(base_length, 0.05), lower=base_length - 0.05, upper=base_length + 0.05)
-tau = cp.Trunc(cp.Normal(base_sampling_time, 0.01), lower=base_sampling_time - 0.01, upper=base_sampling_time + 0.01)
-eta = cp.J(tau, length)
+from stlpy.systems import LinearSystem
 
 
 def gen_linear_matrix(xi_0):
@@ -64,15 +51,29 @@ def bicycle_model(xi, u, delta_t, l):
     return x, y, theta, v
 
 
-def bicycle_linear_model(xi, u, xi_0, delta_t, l):
-
+def gen_bicycle_linear_sys(xi_0, delta_t, l):
     A, B = gen_linear_matrix(xi_0)
     a, b = gen_linear_scalar(delta_t, l)
 
     Am = sum([a[i] * A[i] for i in [0, 1]])
     Bm = sum([b[i] * B[i] for i in [0, 1]])
 
-    next_xi = xi + np.dot(Am, xi) + np.dot(Bm, u)
+    n = Bm.shape[0]
+    m = Bm.shape[1]
+
+    Cm = np.zeros((m, n))
+    Dm = np.zeros((m, m))
+
+    sys = LinearSystem(Am, Bm, Cm, Dm)
+
+    return sys
+
+
+def bicycle_linear_model(xi, u, xi_0, delta_t, l):
+
+    sys = gen_bicycle_linear_sys(xi_0, delta_t, l)
+
+    next_xi = xi + np.dot(sys.A, xi) + np.dot(sys.B, u)
     return next_xi
 
 
@@ -96,8 +97,7 @@ def pce_model(zeta_hat, mu, psi, xi_0, a_hat):
 
     Ab, Bb = gen_pce_matrix(zeta_hat, psi, xi_0, a_hat)
 
-    zeta_hat_next = np.array([zeta_hat[s] + sum([np.dot(Ab[s][j], zeta_hat[j]) for j in range(zeta_hat.shape[1])])
-                              + np.dot(Bb[s], mu) for s in range(zeta_hat.shape[0])])
+    zeta_hat_next = np.array([zeta_hat[s] + sum([Ab[s][j] @ zeta_hat[j] for j in range(zeta_hat.shape[1])]) + Bb[s] @ mu for s in range(zeta_hat.shape[0])])
 
     return zeta_hat_next
 

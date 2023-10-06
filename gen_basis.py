@@ -1,11 +1,16 @@
 import numpy as np
 import chaospy as cp
 from itertools import product
-from commons import eta
 import numpoly
 
-
+base_sampling_time = 0.1
+base_length = 5
 p = 3
+np.random.seed(0)
+
+length = cp.Trunc(cp.Normal(base_length, 0.05), lower=base_length - 0.05, upper=base_length + 0.05)
+tau = cp.Trunc(cp.Normal(base_sampling_time, 0.01), lower=base_sampling_time - 0.01, upper=base_sampling_time + 0.01)
+eta = cp.J(tau, length)
 
 basis = cp.generate_expansion(order=p, dist=eta)
 nodes, weights = cp.generate_quadrature(order=p, dist=eta, rule="Gaussian")

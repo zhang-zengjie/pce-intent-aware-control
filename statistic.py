@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import product
 import chaospy as cp
+import numpoly
 
 
 def get_mean_from_pce(zeta_hat):
