@@ -19,3 +19,11 @@ v = np.array([gamma, a])
 sys = gen_bicycle_linear_sys(x0, base_sampling_time, base_length)
 
 solver = PCEMICPSolver(phi, sys, x0, z0, v, N, robustness_cost=True)
+
+Q = np.zeros([sys.n, sys.n])
+R = 0.01 * np.eye(sys.m)
+solver.AddQuadraticCost(Q, R)
+x, z, u, _, _ = solver.Solve()
+np.save('x.npy', x)
+np.save('z.npy', z)
+np.save('u.npy', u)
