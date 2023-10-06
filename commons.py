@@ -3,9 +3,15 @@ import numpy as np
 import chaospy as cp
 from itertools import product
 
-
+N = 20
 base_sampling_time = 0.1
 base_length = 5
+
+lanes = {'right': 0,
+         'slow': 1.2,
+         'middle': 2.4,
+         'fast': 1.8,
+         'left': 4.8}
 
 length = cp.Trunc(cp.Normal(base_length, 0.05), lower=base_length - 0.05, upper=base_length + 0.05)
 tau = cp.Trunc(cp.Normal(base_sampling_time, 0.01), lower=base_sampling_time - 0.01, upper=base_sampling_time + 0.01)
