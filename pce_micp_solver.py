@@ -142,6 +142,7 @@ class PCEMICPSolver(STLSolver):
             if self.verbose:
                 print("\nOptimal Solution Found!\n")
             x = self.x.X
+            z = self.z.X
             u = self.u.X
             rho = self.rho.X[0]
 
@@ -154,10 +155,11 @@ class PCEMICPSolver(STLSolver):
             if self.verbose:
                 print(f"\nOptimization failed with status {self.model.status}.\n")
             x = None
+            z = None
             u = None
             rho = -np.inf
 
-        return (x, u, rho, self.model.Runtime)
+        return (x, z, u, rho, self.model.Runtime)
 
     def AddDynamicsConstraints(self):
         # Initial condition
@@ -165,7 +167,7 @@ class PCEMICPSolver(STLSolver):
 
         # Dynamics
         for t in range(self.T - 1):
-            self.model.addConstr( self.x[:,t+1] == self.sys.A@self.x[:,t] + self.sys.B@self.u[:,t] )
+            self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] )
             
     def AddPCEDynamicsConstraints(self):
 
