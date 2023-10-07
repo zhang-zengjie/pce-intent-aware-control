@@ -25,7 +25,6 @@ a_hat = np.load('a_hat.npy')
 psi = np.load('psi.npy')
 basis = numpoly.load('basis.npy')
 eps = 0.05
-delta = 0.01
 b = base_length
 v_lim = 3
 o = np.zeros((4, ))
@@ -42,16 +41,19 @@ c3 = np.array([0, -1, 0, 0])
 a4 = np.array([0, 0, 0, 1])
 c4 = np.array([0, 0, 0, -1])
 
-# mu_safe = pf(a1, c1, b, eps) | pf(a2, c2, b, eps) | pf(a3, c3, b, eps)
+a5 = np.array([0, 0, 1, 0])
+c5 = np.array([0, 0, -1, 0])
 
-neg_mu_belief = nvf(a3, 0.3) | ef(o, a3, lanes['middle']) | ef(o, a4, v_lim)
+mu_safe = pf(a1, c1, b, eps) | pf(a2, c2, b, eps) | pf(a3, c3, b, eps)
 
-mu_overtake = ef(a3, o, lanes['slow'] - delta) & ef(c3, o, -lanes['slow'] - delta) & ef(a1, c1, b)
+neg_mu_belief = nvf(a3, 13) | ef(o, a3, lanes['middle']) | ef(o, a4, v_lim)
 
-# phi_safe = mu_safe.always(0, N)
+mu_overtake = ef(a3, o, lanes['slow'] - 0.01) & ef(c3, o, - lanes['slow'] - 0.01) & ef(a1, c1, b) & ef(a5, o, - 1e-4) & ef(c5, o, - 1e-4)
+
+phi_safe = mu_safe.always(0, N)
 phi_belief = neg_mu_belief.eventually(0, N)
 phi_overtake = mu_overtake.eventually(0, N)
 
 # phi = phi_safe & (phi_belief | phi_overtake)
 
-phi = phi_overtake
+phi = phi_safe & phi_overtake

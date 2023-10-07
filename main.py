@@ -13,7 +13,7 @@ z0 = np.array([1, lanes['slow'], 0, 1.2])
 
 sys = gen_bicycle_linear_sys(x0, base_sampling_time, base_length)
 
-solver = PCEMICPSolver(phi, sys, x0, z0, v, N, robustness_cost=False)
+solver = PCEMICPSolver(phi, sys, x0, z0, v, N, robustness_cost=True)
 
 Q = np.zeros([sys.n, sys.n])
 R = 0.01 * np.eye(sys.m)
