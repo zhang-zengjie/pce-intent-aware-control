@@ -13,9 +13,10 @@ def get_mean_from_pce(zeta_hat):
 
 
 def get_var_from_pce(zeta_hat, basis, eta):
-    N = len(zeta_hat)
-    L = len(zeta_hat[0])
+    N = zeta_hat.shape[0]
+    L = zeta_hat.shape[1]
+    S = zeta_hat.shape[2]
     Var = np.zeros([N, 4])
-    for i, j in product(range(N), range(4)):
+    for i, j in product(range(N), range(S)):
         Var[i][j] = sum([zeta_hat[i][k][j] ** 2 * cp.E(basis[k] ** 2, eta) for k in range(1, L)])
     return Var

@@ -4,18 +4,14 @@ from commons import gen_pce_coefficients, monte_carlo_linear_bicycle, monte_carl
 from statistic import get_var_from_pce, get_mean_from_pce
 from matplotlib import pyplot
 from gen_basis import eta
+from param import N, a_hat, psi, basis
 
-
-a_hat = np.load('a_hat.npy')
-psi = np.load('psi.npy')
-basis = numpoly.load('basis.npy')
 L = psi.shape[0]
 
-N = 20
 zeta_0 = np.array([0, 0, 0, 10])
 
-gamma = np.linspace(0.01, 0, N)
-a = np.linspace(0, 0, N)
+gamma = np.linspace(0.1, 0, N)
+a = np.linspace(3, 0, N)
 u = np.array([gamma, a]).T
 
 # Propagate PCE
@@ -30,16 +26,16 @@ mc_samples_linear = np.array([monte_carlo_linear_bicycle(N, zeta_0, u, node[0], 
 
 
 # Draw plots: mean
-'''
+
 pyplot.plot(np.linspace(0, 1, N+1), get_mean_from_pce(zeta_hat).T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
+# pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
 
 
 # Draw plots: variance
 '''
 pyplot.plot(np.linspace(0, 1, N+1), get_var_from_pce(zeta_hat, basis, eta).T[0])
-pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[0])
+# pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[0])
 pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples_linear, 0).T[0])
-
+'''
 pyplot.show()

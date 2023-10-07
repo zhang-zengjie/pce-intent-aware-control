@@ -4,8 +4,8 @@ from itertools import product
 import numpoly
 
 base_sampling_time = 0.1
-base_length = 5
-p = 3
+base_length = 0.5
+p = 2
 np.random.seed(0)
 
 length = cp.Trunc(cp.Normal(base_length, 0.05), lower=base_length - 0.05, upper=base_length + 0.05)
