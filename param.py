@@ -48,12 +48,12 @@ mu_safe = pf(a1, c1, b, eps) | pf(a2, c2, b, eps) | pf(a3, c3, b, eps)
 
 neg_mu_belief = nvf(a3, 13) | ef(o, a3, lanes['middle']) | ef(o, a4, v_lim)
 
-mu_overtake = ef(a3, o, lanes['slow'] - 0.01) & ef(c3, o, - lanes['slow'] - 0.01) & ef(a1, c1, b) & ef(a5, o, - 1e-4) & ef(c5, o, - 1e-4)
+mu_overtake = ef(a3, o, lanes['slow'] - 0.01) & ef(c3, o, - lanes['slow'] - 0.01) & ef(a1, c1, 2*b) & ef(a5, o, - 1e-4).always(0, 3) & ef(c5, o, - 1e-4).always(0, 3)
 
 phi_safe = mu_safe.always(0, N)
 phi_belief = neg_mu_belief.eventually(0, N)
-phi_overtake = mu_overtake.eventually(0, N)
+phi_overtake = mu_overtake.eventually(0, N-3)
 
-# phi = phi_safe & (phi_belief | phi_overtake)
+phi = phi_belief | phi_overtake
 
-phi = phi_safe & phi_overtake
+# phi = phi_belief | phi_overtake
