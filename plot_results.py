@@ -10,7 +10,9 @@ u = np.load('u.npy')
 x = np.load('x.npy')
 z = np.load('z.npy')
 
-H = 10
+H = 500
+
+plt.figure()
 
 plt.plot(lanes['left'] * np.ones((H, )))
 plt.plot(lanes['middle'] * np.ones((H, )))
@@ -35,5 +37,10 @@ plt.ylabel('y')
 
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
+
+
+plt.figure()
+
+pu, = plt.plot(np.arange(0, N+1), u[0])
 
 plt.show()

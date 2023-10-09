@@ -3,13 +3,13 @@ import chaospy as cp
 from itertools import product
 import numpoly
 
-base_sampling_time = 0.1
-base_length = 0.5
+base_sampling_time = 0.5
+base_length = 4
 p = 2
-np.random.seed(0)
+np.random.seed(7)
 
-length = cp.Trunc(cp.Normal(base_length, 0.05), lower=base_length - 0.05, upper=base_length + 0.05)
-tau = cp.Trunc(cp.Normal(base_sampling_time, 0.01), lower=base_sampling_time - 0.01, upper=base_sampling_time + 0.01)
+length = cp.Trunc(cp.Normal(base_length, 0.1), lower=base_length - 0.1, upper=base_length + 0.1)
+tau = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0.05, upper=base_sampling_time + 0.05)
 eta = cp.J(tau, length)
 
 basis = cp.generate_expansion(order=p, dist=eta)
