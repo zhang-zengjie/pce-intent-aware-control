@@ -86,7 +86,7 @@ def gen_pce_matrix(zeta_hat, psi, xi_0, a_hat):
     Bb = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]])
                    for s in range(zeta_hat.shape[0])])
 
-    Ab = np.array([[sum([np.inner(a_hat[i], psi[s][j]) * A[i] for i in [0, 1]])
+    Ab = np.array([[sum([a_hat[i] @ psi[s][j] * A[i] for i in [0, 1]])
                     for j in range(zeta_hat.shape[1])]
                    for s in range(zeta_hat.shape[0])])
 
