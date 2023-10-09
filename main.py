@@ -13,11 +13,15 @@ z0 = np.array([1, lanes['slow'], 0, 1.2])
 
 sys = gen_bicycle_linear_sys(x0, base_sampling_time, base_length)
 
-solver = PCEMICPSolver(phi, sys, x0, z0, v, N, robustness_cost=True)
+solver = PCEMICPSolver(phi, sys, x0, z0, v, N, robustness_cost=False)
+
+u_min = np.array([[-0.5, 0]]).T
+u_max = np.array([[0.5, 10]]).T
 
 Q = np.zeros([sys.n, sys.n])
 R = 0.01 * np.eye(sys.m)
 solver.AddQuadraticCost(Q, R)
+solver.AddControlBounds(u_min, u_max)
 x, z, u, _, _ = solver.Solve()
 np.save('x.npy', x)
 np.save('z.npy', z)

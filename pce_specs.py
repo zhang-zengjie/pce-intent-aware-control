@@ -136,7 +136,7 @@ def neg_variance_formula(c, b, name=None):
 
     This chance constraint can be converted to 
 
-    -b <= coef_i c'z_t^i <= b     for all i=1, 2, ..., L-1
+    coef_i c'z_t^i >= b | coef_i c'z_t^i <= -b     for all i=1, 2, ..., L-1
     given coef_i = sqrt((L-1) * E(Phi_i^2))
 
     :param a:           coefficient vector 
@@ -161,7 +161,7 @@ def neg_variance_formula(c, b, name=None):
         pre_mat[i + 1] = coef[i - 1] * c
         formula_p = LinearPredicate(pre_mat.reshape((1, -1)), b)
         pre_mat[i + 1] = - coef[i - 1] * c
-        formula_n = LinearPredicate(pre_mat.reshape((1, -1)), -b)
+        formula_n = LinearPredicate(pre_mat.reshape((1, -1)), b)
 
         try:
             formula &= formula_p | formula_n
