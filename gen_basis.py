@@ -5,15 +5,15 @@ import numpoly
 
 base_sampling_time = 0.5
 base_length = 4
-p = 2
+q = 2
 np.random.seed(7)
 
 length = cp.Trunc(cp.Normal(base_length, 0.1), lower=base_length - 0.1, upper=base_length + 0.1)
 tau = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0.05, upper=base_sampling_time + 0.05)
 eta = cp.J(tau, length)
 
-basis = cp.generate_expansion(order=p, dist=eta)
-nodes, weights = cp.generate_quadrature(order=p, dist=eta, rule="Gaussian")
+basis = cp.generate_expansion(order=q, dist=eta)
+nodes, weights = cp.generate_quadrature(order=q, dist=eta, rule="Gaussian")
 samples_a1 = [node[0] for node in nodes.T]
 samples_a2 = [node[0]/node[1] for node in nodes.T]
 _, a1_hat = cp.fit_quadrature(basis, nodes, weights, samples_a1, retall=True)

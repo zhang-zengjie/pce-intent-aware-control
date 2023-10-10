@@ -16,16 +16,16 @@ a = np.linspace(0, 0, N)
 v = np.array([gamma, a])
 
 lanes = {'right': 0,
-         'slow': 1,
-         'middle': 2,
-         'fast': 3,
-         'left': 4}
+         'slow': 2,
+         'middle': 4,
+         'fast': 6,
+         'left': 8}
 
 a_hat = np.load('a_hat.npy')
 psi = np.load('psi.npy')
 basis = numpoly.load('basis.npy')
 eps = 0.05
-b = base_length
+b = 5
 v_lim = 30
 o = np.zeros((4, ))
 
