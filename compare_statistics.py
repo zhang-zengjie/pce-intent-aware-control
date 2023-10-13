@@ -1,6 +1,6 @@
 import numpy as np
 import numpoly
-from commons import gen_pce_coefficients, monte_carlo_linear_bicycle, monte_carlo_bicycle
+from libs.commons import gen_pce_coefficients, monte_carlo_linear_bicycle, monte_carlo_bicycle
 from statistic import get_var_from_pce, get_mean_from_pce
 from matplotlib import pyplot
 from gen_basis import eta
