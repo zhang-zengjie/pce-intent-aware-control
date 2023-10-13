@@ -1,7 +1,7 @@
-from pce_specs import probability_formula as pf
-from pce_specs import expecation_formula as ef
-from pce_specs import variance_formula as vf
-from pce_specs import neg_variance_formula as nvf
+from libs.pce_specs import probability_formula as pf
+from libs.pce_specs import expecation_formula as ef
+from libs.pce_specs import variance_formula as vf
+from libs.pce_specs import neg_variance_formula as nvf
 from stlpy.STL import LinearPredicate
 import numpy as np
 import numpoly

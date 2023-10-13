@@ -6,6 +6,7 @@ from matplotlib import pyplot
 from libs.pce_basis import PCEBasis
 import chaospy as cp
 from libs.bicycle_model import BicycleModel
+from itertools import product
 
 
 N = 30
@@ -14,7 +15,7 @@ base_sampling_time = 0.5
 base_length = 4
 q = 2
 
-zeta_0 = np.array([10, 0.5, 0.1, 10])
+zeta_0 = np.array([10, 0.5, 0.02, 10])
 
 gamma = np.linspace(0, 0, N)
 a = np.linspace(0, 0, N)
@@ -58,20 +59,13 @@ for i in range(M):
 
 M = 64
 
-paramm = np.array([[base_sampling_time, base_length]])
-
-nodes = np.repeat(paramm, M, axis=0)
-
-nodes = eta.sample([M, ])
+nodes = eta.sample([M, N])
+bicycle = BicycleModel(zeta_0, nodes[:, 0, 0])
 
 mc_samples = np.zeros([M, N + 1, 4])
-
 mc_samples[:, 0, :] = zeta_0
-
-bicycle = BicycleModel(zeta_0, nodes[:, 0])
-for i in range(M):
-    for j in range(N):
-        bicycle.update_parameter(nodes[:, i])
+for i, j in product(range(M), range(N)):
+        bicycle.update_parameter(nodes[:, i, j])
         mc_samples[i, j+1, :] = bicycle.f(mc_samples[i, j, :], u[j])
 
 
@@ -80,18 +74,15 @@ for i in range(M):
 
 
 mc_samples_linear = np.zeros([M, N + 1, 4])
-
 mc_samples_linear[:, 0, :] = zeta_0
-
-for i in range(M):
-    for j in range(N):
-        bicycle.update_parameter(nodes[:, i])
-        mc_samples_linear[i, j+1, :] = bicycle.sys.A @ mc_samples_linear[i, j, :] + bicycle.sys.B @ u[j]
+for i, j in product(range(M), range(N)):
+        bicycle.update_parameter(nodes[:, i, j])
+        mc_samples_linear[i, j+1, :] = mc_samples_linear[i, j, :] + bicycle.sys.A @ mc_samples_linear[i, j, :] + bicycle.sys.B @ u[j]
 
 
 # Draw plots: mean
 
-pyplot.plot(np.linspace(0, 1, N+1), get_mean_from_pce(zeta_hat).T[1])
+# pyplot.plot(np.linspace(0, 1, N+1), get_mean_from_pce(zeta_hat).T[1])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
 

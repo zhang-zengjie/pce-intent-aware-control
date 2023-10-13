@@ -28,11 +28,6 @@ class PCEBasis:
     
     def generate_coefficients(self, f):
 
-        try:
-            assert len(f) == 1
-        except:
-            print("Function 'generate_coefficients' is only for single functions. For multiple functions, use 'generate_coefficients_multiple' instead.")
-
         samples = [f(node) for node in self.nodes.T]
         _, coefficients = cp.fit_quadrature(self.basis, self.nodes, self.weights, samples, retall=True)
 
