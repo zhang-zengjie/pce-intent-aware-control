@@ -7,6 +7,7 @@ from libs.pce_basis import PCEBasis
 import chaospy as cp
 from libs.bicycle_model import BicycleModel
 from itertools import product
+from libs.bicycle_model import get_linear_matrix
 
 
 N = 30
@@ -28,17 +29,26 @@ tau = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0
 eta = cp.J(tau, length)
 
 B = PCEBasis(eta, q)
+M = 64
 
-f1 = lambda node: node[0]
-f2 = lambda node: node[0]/node[1]
+nodes = eta.sample([M, N])
+bicycle = BicycleModel(zeta_0, nodes[:, 0, 0], B)
+
+#f1 = lambda node: node[0]
+#f2 = lambda node: node[0]/node[1]
 
 # a1_hat = B.generate_coefficients(f1)
-a_hat = B.generate_coefficients_multiple([f1, f2])
+#a_hat = B.generate_coefficients_multiple([f1, f2])
 
 # a_hat = np.array([a1_hat, a2_hat])
 
+x_hat = np.zeros([N + 1, B.L, 4])
+x_hat[0][0] = zeta_0
+for i in range(N):
+        x_hat[i + 1, :, :] = np.array([x_hat[i, s, :] + sum([bicycle.Ap[s][j] @ x_hat[i, j, :] for j in range(B.L)]) + bicycle.Bp[s] @ u[s] for s in range(B.L)])
+
 # Propagate PCE
-zeta_hat = gen_pce_coefficients(N, zeta_0, u, B.psi, a_hat)
+# zeta_hat = gen_pce_coefficients(N, zeta_0, u, B.psi, a_hat)
 
 
 # Monte Carlo
@@ -57,10 +67,8 @@ for i in range(M):
         mc_samples[i, j+1, :] = bicycle.f(mc_samples[i, j, :], u[j])
 '''
 
-M = 64
 
-nodes = eta.sample([M, N])
-bicycle = BicycleModel(zeta_0, nodes[:, 0, 0])
+
 
 mc_samples = np.zeros([M, N + 1, 4])
 mc_samples[:, 0, :] = zeta_0
@@ -81,10 +89,16 @@ for i, j in product(range(M), range(N)):
 
 
 # Draw plots: mean
+'''
+pyplot.plot(np.linspace(0, 1, N+1), B.get_mean_from_coef(x_hat).T[0])
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[0])
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[0])
 
-# pyplot.plot(np.linspace(0, 1, N+1), get_mean_from_pce(zeta_hat).T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
+# Draw plots: variance
+'''
+# pyplot.plot(np.linspace(0, 1, N+1), B.get_var_from_coef(x_hat).T[1])
+pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[1])
+pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples_linear, 0).T[1])
 
 
 pyplot.show()

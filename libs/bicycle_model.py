@@ -40,7 +40,7 @@ def get_linear_matrix(x0):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param):
+    def __init__(self, x0, param, basis):
 
 
         self.n = 4
@@ -68,7 +68,18 @@ class BicycleModel(NonlinearSystem):
 
         self.Em = e * E
         
+        a_hat = basis.generate_coefficients_multiple(self.fn)
+        b_hat = a_hat
+
+        L = basis.L
+
+        self.Ap = np.array([[sum([a_hat[i] @ basis.psi[s][j] * A[i] for i in [0, 1]]) for j in range(L)] for s in range(L)])
+        self.Bp = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]]) for s in range(L)])
+        self.Cp = np.zeros((self.m, L * self.n))
+        self.Dp = np.zeros((self.m, self.m))
+
         self.sys = LinearSystem(Am, Bm, Cm, Dm)
+        
 
     def f(self, x, u):
 
