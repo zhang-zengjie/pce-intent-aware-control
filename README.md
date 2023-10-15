@@ -11,9 +11,8 @@ Python=3.10
 - `conda install -c conda-forge importlib_metadata`
 - `conda install -c conda-forge numpoly`
 
-The script `gen_basis.py` must be run first to configure random variables. Then:
+## Running scripts
 
-- Run `compare_statistics.py` to compare PCE and Monte Carlo
-- Go go `param.py` to change simulation variables
+- Run `compare_statistics.py` to compare PCE and Monte Carlo statistics
+- Go go `commons.py` to change variables of PCE basis and specifications
 - Run `main.py` to solve the optimizer
-- Run `plot_results.py` for visualization
