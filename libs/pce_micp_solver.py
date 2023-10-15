@@ -1,22 +1,17 @@
+import numpy as np
+import time
+import numpoly
+
 from stlpy.solvers.base import STLSolver
 from stlpy.STL import LinearPredicate, NonlinearPredicate
-import numpy as np
+from stlpy.systems import LinearSystem
 
 import gurobipy as gp
 from gurobipy import GRB
 
-from commons import pce_model, gen_pce_matrix
-
-import time
-import numpoly
-
-
-a_hat = np.load('a_hat.npy')
-psi = np.load('psi.npy')
-basis = numpoly.load('basis.npy')
-
 
 class PCEMICPSolver(STLSolver):
+    
     """
     Given an :class:`.STLFormula` :math:`\\varphi` and a :class:`.LinearSystem`,
     solve the optimization problem
@@ -59,16 +54,21 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, sys, x0, z0, v, T, M=1000, 
+    def __init__(self, spec, sys_linear, sys_pce, v, T, M=1000, 
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
-        super().__init__(spec, sys, x0, T, verbose)
+
+        sys = LinearSystem(sys_linear.Al, sys_linear.Bl, sys_linear.Cl, sys_linear.Dl)
+        super().__init__(spec, sys, sys_linear.x0, T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
 
-        self.z0 = z0
-        self.L = psi.shape[0]
+        self.sys_linear = sys_linear
+        self.sys_pce = sys_pce
+
+        self.z0 = sys_pce.x0
+        self.L = sys_pce.basis.L
         self.v = v
         
 
@@ -169,7 +169,7 @@ class PCEMICPSolver(STLSolver):
 
         # Dynamics
         for t in range(self.T - 1):
-            self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] )
+            self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys_linear.El )
             
     def AddPCEDynamicsConstraints(self):
 
@@ -180,9 +180,8 @@ class PCEMICPSolver(STLSolver):
 
         # Dynamics
         for t in range(self.T - 1):
-            Ab, Bb = gen_pce_matrix( self.z[:, :, t], psi, self.z0, a_hat )
             for s in range(self.L):
-                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([Ab[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + Bb[s] @ self.v[:, t] )
+                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([self.sys_pce.Ap[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + self.sys_pce.Bp[s] @ self.v[:, t] + self.sys_pce.Ep[s])
 
 
     def AddSTLConstraints(self):

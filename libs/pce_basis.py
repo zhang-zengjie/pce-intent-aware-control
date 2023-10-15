@@ -1,6 +1,9 @@
 import numpy as np
 import chaospy as cp
 from itertools import product
+import numpoly
+import math
+from stlpy.STL import LinearPredicate
 
 
 class PCEBasis:
@@ -34,20 +37,165 @@ class PCEBasis:
         return coefficients
     
     def get_mean_from_coef(self, zeta_hat):
-        N = len(zeta_hat)
-        E = [zeta_hat[i][0] for i in range(N)]
-        return np.array(E)
+        return zeta_hat[0]
 
 
     def get_var_from_coef(self, zeta_hat):
-        N = zeta_hat.shape[0]
-        L = zeta_hat.shape[1]
-        S = zeta_hat.shape[2]
-        '''
-        Var = np.zeros([N, 4])
-        for i, j in product(range(N), range(S)):
-            Var[i][j] = sum([zeta_hat[i][k][j] ** 2 * cp.E(self.basis[k] ** 2, self.eta) for k in range(1, L)])
-        '''
-        Var = [[sum([zeta_hat[i][k][j] ** 2 * cp.E(self.basis[k] ** 2, self.eta) for k in range(1, L)])
-                      for j in range(S) ] for i in range(N)]
+        L = zeta_hat.shape[0]
+        S = zeta_hat.shape[1]
+
+        Var = [sum([zeta_hat[k][j] ** 2 * cp.E(self.basis[k] ** 2, self.eta) for k in range(1, L)]) for j in range(S)]
+        
         return np.array(Var)
+    
+    def probability_formula(self, a, c, b, eps, name=None):
+
+        """
+        Create STL formulas representing the chance constraint:
+
+        P(a'x_t + c'z_t >= b) >= 1 - eps
+
+        This chance constraint can be converted to 
+
+        a'x_t + c'z_t^0 ± coef_i c'z_t^i -b >=0     for all i=1, 2, ..., L-1
+        given coef_i = sqrt((1-eps)/eps * (L-1) * E(Phi_i^2))
+
+        :param a:           coefficient vector (n, )
+        :param c:           coefficient vector (n, )
+        :param b:           coefficient scalar (1, )
+        :param x_t:         the n dimensional system state at time t (deterministic)
+        :param z_t:         the n dimensional system state at time t (stochastic)
+        :param eps:         probabilistic threshold (1, )
+
+        :return formula:    An ``STLFormula`` specifying the converted deterministic
+                            specifications.
+        """
+
+        coef = np.array([math.sqrt((1 - eps) * (self.L-1) * abs(cp.E(self.basis[k] ** 2, self.eta)) / eps) for k in range(1, self.L)])
+
+        pre_mat = np.zeros((self.L + 1, a.shape[0]))
+        pre_mat[0] = a
+        pre_mat[1] = c
+
+        for i in range(1, self.L):
+            pre_mat[i + 1] = coef[i - 1] * c
+            formula_p = LinearPredicate(pre_mat.reshape((1, -1)), b)
+            pre_mat[i + 1] = - coef[i - 1] * c
+            formula_n = LinearPredicate(pre_mat.reshape((1, -1)), b)
+
+            try:
+                formula &= formula_p & formula_n
+            except:
+                formula = formula_p & formula_n
+
+        return formula
+
+    def expectation_formula(self, a, c, b, name=None):
+
+        """
+        Create STL formulas representing the expectation constraint:
+
+        a'x_t + E(c'z_t) >= b
+
+        This chance constraint can be converted to 
+
+        a'x_t + c'z_t^0 >= b
+
+        :param a:           coefficient vector 
+        :param c:           coefficient vector 
+        :param b:           coefficient scalar
+        :param x_t:         the d dimensional system state at time t (deterministic)
+        :param z_t:         the d dimensional system state at time t (stochastic)
+        :param eps:         probabilistic threshold
+
+        :return formula:    An ``STLFormula`` specifying the converted deterministic
+                            specifications.
+        """
+
+        pre_mat = np.zeros((self.L + 1, a.shape[0]))
+        pre_mat[0] = a
+        pre_mat[1] = c
+
+        formula = LinearPredicate(pre_mat.reshape((1, -1)), b)
+
+        return formula
+
+    def variance_formula(self, c, b, name=None):
+
+        """
+        Create STL formulas representing the expectation constraint:
+
+        Var(c'z_t) <= b^2
+
+        This chance constraint can be converted to 
+
+        -b <= coef_i c'z_t^i <= b     for all i=1, 2, ..., L-1
+        given coef_i = sqrt((L-1) * E(Phi_i^2))
+
+        :param a:           coefficient vector 
+        :param c:           coefficient vector 
+        :param b:           coefficient scalar
+        :param x_t:         the d dimensional system state at time t (deterministic)
+        :param z_t:         the d dimensional system state at time t (stochastic)
+        :param eps:         probabilistic threshold
+
+        :return formula:    An ``STLFormula`` specifying the converted deterministic
+                            specifications.
+        """
+
+        coef = np.array([math.sqrt((self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
+
+        pre_mat = np.zeros((self.L + 1, c.shape[0]))
+
+        for i in range(self.L - 1):
+            pre_mat[i + 1] = coef[i - 1] * c
+            formula_p = LinearPredicate(pre_mat.reshape((1, -1)), -b)
+            pre_mat[i + 1] = - coef[i - 1] * c
+            formula_n = LinearPredicate(pre_mat.reshape((1, -1)), b)
+
+            try:
+                formula &= formula_p & formula_n
+            except:
+                formula = formula_p & formula_n
+
+        return formula
+
+    def neg_variance_formula(self, c, b, name=None):
+
+        """
+        Create STL formulas representing the expectation constraint:
+
+        Var(c'z_t) >= b^2
+
+        This chance constraint can be converted to 
+
+        coef_i c'z_t^i >= b | coef_i c'z_t^i <= -b     for all i=1, 2, ..., L-1
+        given coef_i = sqrt((L-1) * E(Phi_i^2))
+
+        :param a:           coefficient vector 
+        :param c:           coefficient vector 
+        :param b:           coefficient scalar
+        :param x_t:         the d dimensional system state at time t (deterministic)
+        :param z_t:         the d dimensional system state at time t (stochastic)
+        :param eps:         probabilistic threshold
+
+        :return formula:    An ``STLFormula`` specifying the converted deterministic
+                            specifications.
+        """
+
+        coef = np.array([math.sqrt((self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
+
+        pre_mat = np.zeros((self.L + 1, c.shape[0]))
+
+        for i in range(self.L - 1):
+            pre_mat[i + 1] = coef[i - 1] * c
+            formula_p = LinearPredicate(pre_mat.reshape((1, -1)), b)
+            pre_mat[i + 1] = - coef[i - 1] * c
+            formula_n = LinearPredicate(pre_mat.reshape((1, -1)), b)
+
+            try:
+                formula &= formula_p | formula_n
+            except:
+                formula = formula_p | formula_n
+            
+        return formula

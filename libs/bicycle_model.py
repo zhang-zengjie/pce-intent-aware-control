@@ -7,6 +7,7 @@ def get_linear_matrix(x0):
     theta0, v0 = x0[2], x0[3]
     gamma0 = 0
     
+    '''
     A1 = [[0, 0, 0, math.cos(theta0 + gamma0)],
           [0, 0, 0, math.sin(theta0 + gamma0)],
           [0, 0, 0, 0],
@@ -16,7 +17,6 @@ def get_linear_matrix(x0):
           [0, 0, v0 * math.cos(theta0 + gamma0), math.sin(theta0 + gamma0)],
           [0, 0, 0, 0],
           [0, 0, 0, 0]]
-    '''
 
     A2 = [[0, 0, 0, 0],
           [0, 0, 0, 0],
@@ -40,46 +40,25 @@ def get_linear_matrix(x0):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, basis):
-
+    def __init__(self, x0, param, basis=None, pce=False):
 
         self.n = 4
         self.m = 2
         self.p = 4
-        self.x0 = None
-        self.param = None
 
-        self.update_initial(x0)
-        self.update_parameter(param)
+        self.basis = basis
 
         self.fn = [
             lambda z: z[0],
             lambda z: z[0]/z[1]
         ]
 
-        A, B, E = get_linear_matrix(x0)
-        a, b, e = self.get_linear_scalar()
+        self.update_initial(x0)
+        self.update_parameter(param)
 
-        Am = sum([a[i] * A[i] for i in [0, 1]])
-        Bm = sum([b[i] * B[i] for i in [0, 1]])
+        if pce:
+            self.update_pce_parameter()
 
-        Cm = np.zeros((self.m, self.n))
-        Dm = np.zeros((self.m, self.m))
-
-        self.Em = e * E
-        
-        a_hat = basis.generate_coefficients_multiple(self.fn)
-        b_hat = a_hat
-
-        L = basis.L
-
-        self.Ap = np.array([[sum([a_hat[i] @ basis.psi[s][j] * A[i] for i in [0, 1]]) for j in range(L)] for s in range(L)])
-        self.Bp = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]]) for s in range(L)])
-        self.Cp = np.zeros((self.m, L * self.n))
-        self.Dp = np.zeros((self.m, self.m))
-
-        self.sys = LinearSystem(Am, Bm, Cm, Dm)
-        
 
     def f(self, x, u):
 
@@ -113,5 +92,29 @@ class BicycleModel(NonlinearSystem):
         self.x0 = x0
 
     def update_parameter(self, param):
+
         self.param = param
-        
+
+        A, B, E = get_linear_matrix(self.x0)
+        a, b, e = self.get_linear_scalar()
+
+        self.Al = sum([a[i] * A[i] for i in [0, 1]])
+        self.Bl = sum([b[i] * B[i] for i in [0, 1]])
+        self.Cl = np.zeros((self.m, self.n))
+        self.Dl = np.zeros((self.m, self.m))
+        self.El = e * E
+
+
+    def update_pce_parameter(self):
+
+        A, B, E = get_linear_matrix(self.x0)
+
+        a_hat = self.basis.generate_coefficients_multiple(self.fn)
+        b_hat = a_hat
+        e_hat = a_hat[0]
+
+        self.Ap = np.array([[sum([a_hat[i] @ self.basis.psi[s][j] * A[i] for i in [0, 1]]) for j in range(self.basis.L)] for s in range(self.basis.L)])
+        self.Bp = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]]) for s in range(self.basis.L)])
+        self.Cp = np.zeros((self.m, self.basis.L * self.n))
+        self.Dp = np.zeros((self.m, self.m))
+        self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
