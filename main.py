@@ -1,8 +1,8 @@
 import numpy as np
 from libs.pce_micp_solver import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
-from param import gen_pce_specs, lanes
-from plot_results import visualize
+from commons import gen_pce_specs, lanes
+from commons import visualize
 
 
 base_sampling_time = 0.5

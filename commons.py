@@ -46,7 +46,9 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     neg_mu_belief = B.neg_variance_formula(a3, 13) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
 
-    mu_overtake = B.expectation_formula(a3, o, lanes['slow'] - 0.01) & B.expectation_formula(c3, o, - lanes['slow'] - 0.011) & B.expectation_formula(a1, c1, 2*b) #& B.expectation_formula(a5, o, - 1e-4).always(0, 3) & B.expectation_formula(c5, o, - 1e-4).always(0, 3)
+    mu_overtake = B.expectation_formula(a3, o, lanes['slow'] - 0.01) & B.expectation_formula(c3, o, - lanes['slow'] - 0.011) \
+                    & B.expectation_formula(a1, c1, 2*b) \
+                    & B.expectation_formula(a5, o, - 0.01).always(0, 3) & B.expectation_formula(c5, o, - 0.01).always(0, 3)
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = neg_mu_belief.eventually(0, N)
@@ -61,16 +63,18 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
 def visualize(x, z0, v, B, bicycle):
 
-    N = len(x)
+    from matplotlib.patches import Rectangle
+
+    N = x.shape[1]-1
     H = 500
 
-    plt.figure()
+    fig, ax = plt.subplots()
 
-    plt.plot(lanes['left'] * np.ones((H, )))
-    plt.plot(lanes['middle'] * np.ones((H, )))
-    plt.plot(lanes['right'] * np.ones((H, )))
+    ax.plot(lanes['left'] * np.ones((H, )))
+    ax.plot(lanes['middle'] * np.ones((H, )))
+    ax.plot(lanes['right'] * np.ones((H, )))
 
-    p, = plt.plot(x[0, :], x[1, :])
+    p = ax.plot(x[0, :], x[1, :])
 
     M = 64
     nodes = B.eta.sample([M, ])
@@ -83,7 +87,8 @@ def visualize(x, z0, v, B, bicycle):
             mc_samples_linear[i, j + 1, :] = mc_samples_linear[i, j, :] + bicycle.Al @ mc_samples_linear[i, j, :] + bicycle.Bl @ v[:, j] + bicycle.El
 
     for i in range(M):
-        plt.plot(mc_samples_linear[i, :, 0], mc_samples_linear[i, :, 1])
+        ax.plot(mc_samples_linear[i, :, 0], mc_samples_linear[i, :, 1])
+        ax.add_patch(Rectangle(xy=(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
 
 
     plt.xlim([0, H])
