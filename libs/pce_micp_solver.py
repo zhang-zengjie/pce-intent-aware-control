@@ -4,7 +4,7 @@ import numpoly
 
 from stlpy.solvers.base import STLSolver
 from stlpy.STL import LinearPredicate, NonlinearPredicate
-from stlpy.systems import LinearSystem
+from libs.bicycle_model import LinearAffineSystem
 
 import gurobipy as gp
 from gurobipy import GRB
@@ -18,15 +18,15 @@ class PCEMICPSolver(STLSolver):
 
     .. math::
 
-        \min & -\\rho^{\\varphi}(y_0,y_1,\dots,y_T) + \sum_{t=0}^T x_t^TQx_t + u_t^TRu_t
+        \min & -\\rho^{\\varphi}(y_0,y_1,\dots,y_T) + \sum_{t=0}^T (x_t^TQx_t + u_t^TRu_t)
 
         \\text{s.t. } & x_0 \\text{ fixed}
 
-        & x_{t+1} = A x_t + B u_t
+        & x_{t+1} = Al x_t + Bl u_t + El
 
-        & y_{t} = C x_t + D u_t
+        & hat{x}_{t+1} = Ap hat{x}_t + Bp v_t + Ep, \\ v_t \text{fixed}
 
-        & \\rho^{\\varphi}(y_0,y_1,\dots,y_T) \geq 0
+        & \\rho^{\\varphi}(x_0,x_1,\dots,x_T, hat{z}_0, hat{z}_1, \dots, \hat{z}_T) \geq 0
 
     with Gurobi using mixed-integer convex programming. This gives a globally optimal
     solution, but may be computationally expensive for long and complex specifications.
@@ -41,8 +41,9 @@ class PCEMICPSolver(STLSolver):
         https://dx.doi.org/10.1146/annurev-control-053018-023717.
 
     :param spec:            An :class:`.STLFormula` describing the specification.
-    :param sys:             A :class:`.LinearSystem` describing the system dynamics.
-    :param x0:              A ``(n,1)`` numpy matrix describing the initial state.
+    :param sys_x:           A :class:`.BicycleModel` describing the deterministic system dynamics.
+    :param sys_z:           A :class:`.BicycleModel` describing the PCE system dynamics.
+    :param v:               A numpy array fixing the assumed control input of the PCE system.
     :param T:               A positive integer fixing the total number of timesteps :math:`T`.
     :param M:               (optional) A large positive scalar used to rewrite ``min`` and ``max`` as
                             mixed-integer constraints. Default is ``1000``.
@@ -54,21 +55,20 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, sys_linear, sys_pce, v, T, M=1000, 
+    def __init__(self, spec, sys_x, sys_z, v, T, M=1000, 
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
 
-        sys = LinearSystem(sys_linear.Al, sys_linear.Bl, sys_linear.Cl, sys_linear.Dl)
-        super().__init__(spec, sys, sys_linear.x0, T, verbose)
+        sys = LinearAffineSystem(sys_x.Al, sys_x.Bl, sys_x.Cl, sys_x.Dl, sys_x.El)
+        super().__init__(spec, sys, sys_x.x0, T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
 
-        self.sys_linear = sys_linear
-        self.sys_pce = sys_pce
+        self.sys_z = sys_z
 
-        self.z0 = sys_pce.x0
-        self.L = sys_pce.basis.L
+        self.z0 = sys_z.x0
+        self.L = sys_z.basis.L
         self.v = v
         
 
@@ -169,7 +169,7 @@ class PCEMICPSolver(STLSolver):
 
         # Dynamics
         for t in range(self.T - 1):
-            self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys_linear.El )
+            self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys.E )
             
     def AddPCEDynamicsConstraints(self):
 
@@ -181,7 +181,7 @@ class PCEMICPSolver(STLSolver):
         # Dynamics
         for t in range(self.T - 1):
             for s in range(self.L):
-                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([self.sys_pce.Ap[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + self.sys_pce.Bp[s] @ self.v[:, t] + self.sys_pce.Ep[s])
+                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([self.sys_z.Ap[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + self.sys_z.Bp[s] @ self.v[:, t] + self.sys_z.Ep[s])
 
 
     def AddSTLConstraints(self):
