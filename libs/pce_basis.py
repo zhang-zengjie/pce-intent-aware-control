@@ -55,16 +55,19 @@ class PCEBasis:
 
         P(a'x_t + c'z_t >= b) >= 1 - eps
 
+        :x_t                n dimensional deterministic signal
+        :z_t                n dimensional stochastic signal
+
         This chance constraint can be converted to 
 
-        a'x_t + c'z_t^0 ± coef_i c'z_t^i -b >=0     for all i=1, 2, ..., L-1
-        given coef_i = sqrt((1-eps)/eps * (L-1) * E(Phi_i^2))
+        a'x_t + c'hat{z}_t^0 ± coef_i c'\hat{z}_t^i -b >=0     for all i=1, 2, ..., L-1
+        given coef_i = sqrt((1-eps)/eps * (L-1) * E(Phi_i^2))  for all i=1, 2, ..., L-1
+
+        hat{z}_t:           n * L dimensional PCE coefficients of z_t
 
         :param a:           coefficient vector (n, )
-        :param c:           coefficient vector (n, )
+        :param c:           coefficient vector (n * L, )
         :param b:           coefficient scalar (1, )
-        :param x_t:         the n dimensional system state at time t (deterministic)
-        :param z_t:         the n dimensional system state at time t (stochastic)
         :param eps:         probabilistic threshold (1, )
 
         :return formula:    An ``STLFormula`` specifying the converted deterministic
@@ -97,16 +100,16 @@ class PCEBasis:
 
         a'x_t + E(c'z_t) >= b
 
+        :x_t                n dimensional deterministic signal
+        :z_t                n dimensional stochastic signal
+
         This chance constraint can be converted to 
 
-        a'x_t + c'z_t^0 >= b
+        a'x_t + c'hat{z}_t^0 >= b
 
-        :param a:           coefficient vector 
-        :param c:           coefficient vector 
-        :param b:           coefficient scalar
-        :param x_t:         the d dimensional system state at time t (deterministic)
-        :param z_t:         the d dimensional system state at time t (stochastic)
-        :param eps:         probabilistic threshold
+        :param a:           coefficient vector (n, )
+        :param c:           coefficient vector (n * L, )
+        :param b:           coefficient scalar (1, )
 
         :return formula:    An ``STLFormula`` specifying the converted deterministic
                             specifications.
@@ -127,17 +130,15 @@ class PCEBasis:
 
         Var(c'z_t) <= b^2
 
+        :z_t                n dimensional stochastic signal
+
         This chance constraint can be converted to 
 
         -b <= coef_i c'z_t^i <= b     for all i=1, 2, ..., L-1
-        given coef_i = sqrt((L-1) * E(Phi_i^2))
+        given coef_i = sqrt((L-1) * E(Phi_i^2))     for all i=1, 2, ..., L-1
 
-        :param a:           coefficient vector 
-        :param c:           coefficient vector 
+        :param c:           n dimensional coefficient vector 
         :param b:           coefficient scalar
-        :param x_t:         the d dimensional system state at time t (deterministic)
-        :param z_t:         the d dimensional system state at time t (stochastic)
-        :param eps:         probabilistic threshold
 
         :return formula:    An ``STLFormula`` specifying the converted deterministic
                             specifications.
@@ -167,17 +168,15 @@ class PCEBasis:
 
         Var(c'z_t) >= b^2
 
+        :z_t                n dimensional stochastic signal
+
         This chance constraint can be converted to 
 
         coef_i c'z_t^i >= b | coef_i c'z_t^i <= -b     for all i=1, 2, ..., L-1
-        given coef_i = sqrt((L-1) * E(Phi_i^2))
+        given coef_i = sqrt((L-1) * E(Phi_i^2))     for all i=1, 2, ..., L-1
 
-        :param a:           coefficient vector 
-        :param c:           coefficient vector 
+        :param c:           n dimentional coefficient vector 
         :param b:           coefficient scalar
-        :param x_t:         the d dimensional system state at time t (deterministic)
-        :param z_t:         the d dimensional system state at time t (stochastic)
-        :param eps:         probabilistic threshold
 
         :return formula:    An ``STLFormula`` specifying the converted deterministic
                             specifications.

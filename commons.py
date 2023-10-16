@@ -15,16 +15,20 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     np.random.seed(7)
 
+    # Sample delta_t
     delta_t = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0.05, upper=base_sampling_time + 0.05)
+
+    # Sample length
     length = cp.Trunc(cp.Normal(base_length, 0.1), lower=base_length - 0.1, upper=base_length + 0.1)
     
-    eta = cp.J(delta_t, length)
+    eta = cp.J(delta_t, length) # Generate the random variable instance
 
-    B = PCEBasis(eta, q)
+    B = PCEBasis(eta, q)        # Initialize the PCE instance
 
-    eps = 0.05
-    b = 5
-    v_lim = 30
+    eps = 0.05          # Probability threshold
+    v_lim = 30          # Velocity limit
+
+    # Coefficients of the predicates
     o = np.zeros((4, ))
 
     a1 = np.array([1, 0, 0, 0])
@@ -41,6 +45,8 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     a5 = np.array([0, 0, 1, 0])
     c5 = np.array([0, 0, -1, 0])
+
+    b = 5
 
     mu_safe = B.probability_formula(a1, c1, b, eps) | B.probability_formula(a2, c2, b, eps) | B.probability_formula(a3, c3, b, eps)
 
@@ -74,11 +80,15 @@ def visualize(x, z0, v, B, bicycle):
     ax.plot(lanes['middle'] * np.ones((H, )))
     ax.plot(lanes['right'] * np.ones((H, )))
 
+    # Plot the trajectory of the ego vehicle (EV)
     p = ax.plot(x[0, :], x[1, :])
 
     M = 64
+
+    # Sample parameters from distribution eta
     nodes = B.eta.sample([M, ])
 
+    # Generate the sampled trajectories of the obstacle vehicle (OV) 
     mc_samples_linear = np.zeros([M, N + 1, 4])
     mc_samples_linear[:, 0, :] = z0
     for i in range(M):
@@ -86,6 +96,7 @@ def visualize(x, z0, v, B, bicycle):
         for j in range(N):
             mc_samples_linear[i, j + 1, :] = mc_samples_linear[i, j, :] + bicycle.Al @ mc_samples_linear[i, j, :] + bicycle.Bl @ v[:, j] + bicycle.El
 
+    # Plot the trajectories of the obstacle vehicle (OV) 
     for i in range(M):
         ax.plot(mc_samples_linear[i, :, 0], mc_samples_linear[i, :, 1])
         ax.add_patch(Rectangle(xy=(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
