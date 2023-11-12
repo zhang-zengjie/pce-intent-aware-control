@@ -50,17 +50,17 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     mu_safe = B.probability_formula(a1, c1, b, eps) | B.probability_formula(a2, c2, b, eps) | B.probability_formula(a3, c3, b, eps)
 
-    neg_mu_belief = B.neg_variance_formula(a3, 13) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
+    neg_mu_belief = B.neg_variance_formula(a3, 0.9) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
 
     mu_overtake = B.expectation_formula(a3, o, lanes['slow'] - 0.01) & B.expectation_formula(c3, o, - lanes['slow'] - 0.011) \
                     & B.expectation_formula(a1, c1, 2*b) \
-                    & B.expectation_formula(a5, o, - 0.01).always(0, 3) & B.expectation_formula(c5, o, - 0.01).always(0, 3)
+                    & B.expectation_formula(a5, o, - 0.000001).always(0, 3) & B.expectation_formula(c5, o, - 0.000001).always(0, 3)
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = neg_mu_belief.eventually(0, N)
     phi_overtake = mu_overtake.eventually(0, N-3)
 
-    # phi = phi_overtake
+    phi = phi_overtake
 
     phi = phi_belief | phi_overtake
 
@@ -76,12 +76,12 @@ def visualize(x, z0, v, B, bicycle):
 
     fig, ax = plt.subplots()
 
-    ax.plot(lanes['left'] * np.ones((H, )))
-    ax.plot(lanes['middle'] * np.ones((H, )))
-    ax.plot(lanes['right'] * np.ones((H, )))
+    ax.plot(lanes['left'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
+    ax.plot(lanes['middle'] * np.ones((H, )), linestyle='dashed', linewidth=1, color='black')
+    ax.plot(lanes['right'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
 
     # Plot the trajectory of the ego vehicle (EV)
-    p = ax.plot(x[0, :], x[1, :])
+    p = ax.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
 
     M = 64
 
