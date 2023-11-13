@@ -5,13 +5,13 @@ from commons import gen_pce_specs, lanes
 from commons import visualize
 
 
-base_sampling_time = 0.5    # The baseline value of sampling time delta_t
+base_sampling_time = 0.1    # The baseline value of sampling time delta_t
 base_length = 4             # The baseline value of the vehicle length
 q = 2                       # The polynomial order
 N = 30                      # The control horizon
 
 # Generate the PCE instance and the specification
-B, phi = gen_pce_specs(base_sampling_time, base_length, q, N)
+B, phi, phi_belief, phi_neg_belief = gen_pce_specs(base_sampling_time, base_length, q, N)
 
 # The assumed control input of the obstacle vehicle (OV)
 gamma = np.linspace(0, 0, N)
@@ -34,11 +34,20 @@ solver = PCEMICPSolver(phi, sys1, sys2, v, N, robustness_cost=True)
 
 # Adding input to the cost function
 Q = np.zeros([sys1.n, sys1.n])
-R = np.array([[0.5, 0], [0, 0.01]])
-solver.AddQuadraticCost(Q, R)
+# Q = np.diag([0, 10, 10, 0])
+R = np.array([[0.5, 0], [0, 0.01]]) * 100
+ref = np.array([0, lanes['fast'], 0, 0])
+solver.AddQuadraticCost(Q, R, ref)
 
 # Solve the problem
 x, z, u, _, _ = solver.Solve()
+L = (1 + z.shape[0]) * z.shape[1]
+xx = np.zeros([L, z.shape[2]])
+
+for i in range(z.shape[2]):
+    xx[:z.shape[1], i] = x[:, i]
+    xx[z.shape[1]:, i] = z[:, :, i].reshape(1, -1)[0]
 
 # Visualize the results
+
 visualize(x, z0, v, B, sys2)

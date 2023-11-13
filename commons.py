@@ -16,10 +16,10 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
     np.random.seed(7)
 
     # Sample delta_t
-    delta_t = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0.05, upper=base_sampling_time + 0.05)
+    delta_t = cp.Trunc(cp.Normal(base_sampling_time, 5e-4), lower=base_sampling_time - 5e-4, upper=base_sampling_time + 5e-4)
 
     # Sample length
-    length = cp.Trunc(cp.Normal(base_length, 0.1), lower=base_length - 0.1, upper=base_length + 0.1)
+    length = cp.Trunc(cp.Normal(base_length, 1e-4), lower=base_length - 1e-4, upper=base_length + 1e-4)
     
     eta = cp.J(delta_t, length) # Generate the random variable instance
 
@@ -50,21 +50,33 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     mu_safe = B.probability_formula(a1, c1, b, eps) | B.probability_formula(a2, c2, b, eps) | B.probability_formula(a3, c3, b, eps)
 
-    neg_mu_belief = B.neg_variance_formula(a3, 0.9) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
+    # mu_belief = B.variance_formula(a1, 0.9) & B.variance_formula(a3, 0.9) & B.expectation_formula(o, c3, lanes['middle']) & B.expectation_formula(o, c4, v_lim)
+
+    mu_belief = B.variance_formula(a1, 0)
+
+    neg_mu_belief = B.neg_variance_formula(a1, 0)
+
+    # neg_mu_belief = B.neg_variance_formula(a1, 0.9) | B.neg_variance_formula(a3, 0.9) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
 
     mu_overtake = B.expectation_formula(a3, o, lanes['slow'] - 0.01) & B.expectation_formula(c3, o, - lanes['slow'] - 0.011) \
                     & B.expectation_formula(a1, c1, 2*b) \
                     & B.expectation_formula(a5, o, - 0.000001).always(0, 3) & B.expectation_formula(c5, o, - 0.000001).always(0, 3)
+    
+    mu_drive = B.expectation_formula(a3, o, lanes['fast'] - 0.01) & B.expectation_formula(c3, o, - lanes['fast'] - 0.011)
 
     phi_safe = mu_safe.always(0, N)
-    phi_belief = neg_mu_belief.eventually(0, N)
+    phi_belief = mu_belief.always(0, N)
+    phi_neg_belief = neg_mu_belief.eventually(0, N)
     phi_overtake = mu_overtake.eventually(0, N-3)
+    phi_drive = mu_drive.always(0, N)
 
     phi = phi_overtake
 
-    phi = phi_belief | phi_overtake
+    # phi = (phi_neg_belief | phi_overtake) | (phi_belief | phi_drive)
 
-    return B, phi
+    # phi = (phi_neg_belief | phi_overtake) & (phi_belief | phi_drive)
+
+    return B, phi, phi_belief, phi_neg_belief
 
 
 def visualize(x, z0, v, B, bicycle):
