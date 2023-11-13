@@ -5,7 +5,7 @@ from commons import gen_pce_specs, lanes
 from commons import visualize
 
 
-base_sampling_time = 0.1    # The baseline value of sampling time delta_t
+base_sampling_time = 0.5    # The baseline value of sampling time delta_t
 base_length = 4             # The baseline value of the vehicle length
 q = 2                       # The polynomial order
 N = 30                      # The control horizon

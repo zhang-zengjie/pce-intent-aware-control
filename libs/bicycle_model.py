@@ -3,7 +3,7 @@ import numpy as np
 import math
 
 
-def get_linear_matrix(x0):
+def get_linear_matrix(x0, delta_t):
     theta0, v0 = x0[2], x0[3]
     gamma0 = 0
     
@@ -27,24 +27,27 @@ def get_linear_matrix(x0):
           [v0 * math.cos(gamma0), 0],
           [0, 0]]
     
-    E = [v0 * math.sin(theta0 + gamma0) * theta0, - v0 * math.cos(theta0 + gamma0) * theta0, 0, 0]
+    E1 = [v0 * math.sin(theta0 + gamma0) * theta0, - v0 * math.cos(theta0 + gamma0) * theta0, 0, 0]
 
-    return np.array([A1, A2]), np.array([B1, B2]), np.array(E)
+    E2 = [0, 0, 0, 1]
+
+    return np.array([A1, A2]) * delta_t, np.array([B1, B2]) * delta_t, np.array([E1, E2]) * delta_t
 
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, basis=None, pce=False):
+    def __init__(self, x0, param, basis=None, delta_t=0.5, pce=False):
 
         self.n = 4
         self.m = 2
         self.p = 4
 
         self.basis = basis
+        self.delta_t = delta_t
 
         self.fn = [
             lambda z: z[0],
-            lambda z: z[0]/z[1]
+            lambda z: 1/z[1]
         ]
 
         self.update_initial(x0)
@@ -56,15 +59,16 @@ class BicycleModel(NonlinearSystem):
 
     def f(self, x, u):
 
-        delta_t = self.param[0]
+        delta_t = self.delta_t
         l = self.param[1]
+        delta = self.param[0]
 
         xx, yy, theta, v = x[0], x[1], x[2], x[3]
         gamma, a = u[0], u[1]
         xx += delta_t * v * math.cos(theta + gamma)
         yy += delta_t * v * math.sin(theta + gamma)
         theta += delta_t * v * math.sin(gamma)/l
-        v += delta_t * a
+        v += delta_t * (a + delta)
         return np.array([xx, yy, theta, v])
     
     def g(self, x, u):
@@ -74,13 +78,14 @@ class BicycleModel(NonlinearSystem):
 
         f1, f2 = self.fn[0], self.fn[1]
 
-        a1 = f1(self.param)
-        b1 = f1(self.param)
-        e = f1(self.param)
-        a2 = f2(self.param)
+        a1 = 1
+        b1 = 1
+        e1 = 1
+        a2 = 1
         b2 = f2(self.param)
+        e2 = f1(self.param)
 
-        return (a1, a2), (b1, b2), e
+        return (a1, a2), (b1, b2), (e1, e2)
     
     def update_initial(self, x0):
         self.x0 = x0
@@ -89,29 +94,32 @@ class BicycleModel(NonlinearSystem):
 
         self.param = param
 
-        A, B, E = get_linear_matrix(self.x0)
+        A, B, E = get_linear_matrix(self.x0, self.delta_t)
         a, b, e = self.get_linear_scalar()
 
         self.Al = sum([a[i] * A[i] for i in [0, 1]])
         self.Bl = sum([b[i] * B[i] for i in [0, 1]])
         self.Cl = np.zeros((self.m, self.n))
         self.Dl = np.zeros((self.m, self.m))
-        self.El = e * E
+        self.El = sum([e[i] * E[i] for i in [0, 1]])
 
 
     def update_pce_parameter(self):
 
-        A, B, E = get_linear_matrix(self.x0)
+        A, B, E = get_linear_matrix(self.x0, self.delta_t)
 
-        a_hat = self.basis.generate_coefficients_multiple(self.fn)
-        b_hat = a_hat
-        e_hat = a_hat[0]
+        coef = self.basis.generate_coefficients_multiple(self.fn)
+        b_hat = coef[1]
+        e_hat = coef[0]
 
-        self.Ap = np.array([[sum([a_hat[i] @ self.basis.psi[s][j] * A[i] for i in [0, 1]]) for j in range(self.basis.L)] for s in range(self.basis.L)])
-        self.Bp = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]]) for s in range(self.basis.L)])
+        A_prod = np.diag(np.ones(self.basis.L))
+
+        self.Ap = np.array([[A_prod[j][s] * A[0] for j in range(self.basis.L)] for s in range(self.basis.L)])
+        self.Bp = np.array([B[0] + b_hat[s] * B[1] for s in range(self.basis.L)])
         self.Cp = np.zeros((self.m, self.basis.L * self.n))
         self.Dp = np.zeros((self.m, self.m))
-        self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
+        self.Ep = np.array([E[0] + e_hat[s] * E[1] for s in range(self.basis.L)])
+        # self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
 
 
 class LinearAffineSystem(LinearSystem):

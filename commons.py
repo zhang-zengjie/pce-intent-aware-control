@@ -16,12 +16,18 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
     np.random.seed(7)
 
     # Sample delta_t
-    delta_t = cp.Trunc(cp.Normal(base_sampling_time, 5e-4), lower=base_sampling_time - 5e-4, upper=base_sampling_time + 5e-4)
+    # delta_t = cp.Trunc(cp.Normal(base_sampling_time, 5e-1), lower=base_sampling_time - 1e-3, upper=base_sampling_time + 1e-3)
+
+    delta_t = base_sampling_time
 
     # Sample length
-    length = cp.Trunc(cp.Normal(base_length, 1e-4), lower=base_length - 1e-4, upper=base_length + 1e-4)
+    # length = cp.Trunc(cp.Normal(base_length, 1e-4), lower=base_length - 1e-4, upper=base_length + 1e-4)
     
-    eta = cp.J(delta_t, length) # Generate the random variable instance
+
+
+    length = cp.Uniform(lower=base_length - 1e-3, upper=base_length + 1e-3)
+
+    eta = cp.J(delta, length) # Generate the random variable instance
 
     B = PCEBasis(eta, q)        # Initialize the PCE instance
 
