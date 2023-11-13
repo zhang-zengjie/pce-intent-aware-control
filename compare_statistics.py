@@ -19,15 +19,18 @@ u = np.array([gamma, a])
 
 np.random.seed(7)
 
-length = cp.Trunc(cp.Normal(base_length, 0.1), lower=base_length - 0.1, upper=base_length + 0.1)
-tau = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0.05, upper=base_sampling_time + 0.05)
-eta = cp.J(tau, length)
+# length = cp.Trunc(cp.Normal(base_length, 0.1), lower=base_length - 0.1, upper=base_length + 0.1)
+# tau = cp.Trunc(cp.Normal(base_sampling_time, 0.05), lower=base_sampling_time - 0.05, upper=base_sampling_time + 0.05)
+
+delta = cp.Trunc(cp.Normal(0, 0.01), lower=-0.01, upper=0.01)
+length = cp.Uniform(lower=base_length - 1e-3, upper=base_length + 1e-3)
+eta = cp.J(delta, length)
 
 B = PCEBasis(eta, q)
 M = 64
 
 nodes = eta.sample([M,])
-bicycle_pce = BicycleModel(zeta_0, nodes[:, 0], B, pce=True)
+bicycle_pce = BicycleModel(zeta_0, nodes[:, 0], B, base_sampling_time, pce=True)
 
 
 x_hat = np.zeros([N + 1, B.L, 4])
@@ -57,16 +60,16 @@ pce_mean = np.array([B.get_mean_from_coef(x_hat[i]) for i in range(N + 1)])
 pce_var = np.array([B.get_var_from_coef(x_hat[i]) for i in range(N + 1)])
 
 # Draw plots: mean
-
+'''
 pyplot.plot(np.linspace(0, 1, N+1), pce_mean.T[0])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[0])
+# pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[0])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[0])
 
 # Draw plots: variance
 '''
 pyplot.plot(np.linspace(0, 1, N+1), pce_var.T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[1])
+# pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0).T[1])
 pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples_linear, 0).T[1])
-'''
+
 
 pyplot.show()
