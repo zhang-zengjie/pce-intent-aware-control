@@ -11,7 +11,7 @@ q = 2                       # The polynomial order
 N = 30                      # The control horizon
 
 # Generate the PCE instance and the specification
-B, phi, phi_belief, phi_neg_belief = gen_pce_specs(base_sampling_time, base_length, q, N)
+B, phi, phi_belief, phi_neg_belief, mu_belief, neg_mu_belief = gen_pce_specs(base_sampling_time, base_length, q, N)
 
 # The assumed control input of the obstacle vehicle (OV)
 gamma = np.linspace(0, 0, N)
@@ -49,5 +49,6 @@ for i in range(z.shape[2]):
     xx[z.shape[1]:, i] = z[:, :, i].reshape(1, -1)[0]
 
 # Visualize the results
-
+# mu_belief.robustness(xx, 1)
+mu_belief.robustness(xx, 30)
 visualize(x, z0, v, B, sys2)

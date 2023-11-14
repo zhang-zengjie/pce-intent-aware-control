@@ -3,7 +3,8 @@ import chaospy as cp
 from itertools import product
 import numpoly
 import math
-from stlpy.STL import LinearPredicate
+from stlpy.STL import LinearPredicate, NonlinearPredicate
+import copy
 
 
 class PCEBasis:
@@ -39,6 +40,19 @@ class PCEBasis:
     def get_mean_from_coef(self, zeta_hat):
         return zeta_hat[0]
 
+    def get_max_coef(self, zeta_hat):
+
+        L = zeta_hat.shape[0]
+        S = zeta_hat.shape[1]
+
+        for k in range(1, L):
+            for j in range(S):
+                zeta_hat[k][j] = zeta_hat[k][j] * np.sqrt(abs(cp.E(self.basis[k] ** 2, self.eta)))
+
+        return np.amax(abs(zeta_hat[1:, :]), axis=0)
+    
+    def get_coef(self, zeta_hat, row):
+        return zeta_hat[row]
 
     def get_var_from_coef(self, zeta_hat):
         L = zeta_hat.shape[0]
@@ -47,6 +61,14 @@ class PCEBasis:
         Var = [sum([zeta_hat[k][j] ** 2 * cp.E(self.basis[k] ** 2, self.eta) for k in range(1, L)]) for j in range(S)]
         
         return np.array(Var)
+    
+    def get_std_from_coef(self, zeta_hat):
+        L = zeta_hat.shape[0]
+        S = zeta_hat.shape[1]
+
+        Var = [sum([zeta_hat[k][j] ** 2 * cp.E(self.basis[k] ** 2, self.eta) for k in range(1, L)]) for j in range(S)]
+        
+        return np.sqrt(Var)
     
     def probability_formula(self, a, c, b, eps, name=None):
 
@@ -131,6 +153,7 @@ class PCEBasis:
         Var(c'z_t) <= b^2
 
         :z_t                n dimensional stochastic signal
+        :c                  n dimensional selection vector
 
         This chance constraint can be converted to 
 
@@ -144,15 +167,16 @@ class PCEBasis:
                             specifications.
         """
 
-        coef = np.array([math.sqrt((self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
+        coef = np.sqrt([(self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta)) for k in range(1, self.L)])
 
-        pre_mat = np.zeros((self.L + 1, c.shape[0]))
+        
 
-        for i in range(self.L - 1):
+        for i in range(1, self.L - 1):
+            pre_mat = np.zeros((self.L + 1, c.shape[0]))
             pre_mat[i + 1] = coef[i - 1] * c
-            formula_p = LinearPredicate(pre_mat.reshape((1, -1)), -b)
+            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), -b, name='p'+str(i))
             pre_mat[i + 1] = - coef[i - 1] * c
-            formula_n = LinearPredicate(pre_mat.reshape((1, -1)), b)
+            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), -b, name='n'+str(i))
 
             try:
                 formula &= formula_p & formula_n
@@ -182,18 +206,18 @@ class PCEBasis:
                             specifications.
         """
 
-        coef = np.array([math.sqrt((self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
+        # coef = np.array([math.sqrt((self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
+        coef = np.sqrt([(self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta)) for k in range(1, self.L)])
 
-        pre_mat = np.zeros((self.L + 1, c.shape[0]))
-
-        for i in range(self.L - 1):
+        for i in range(1, self.L - 1):
+            pre_mat = np.zeros((self.L + 1, c.shape[0]))
             pre_mat[i + 1] = coef[i - 1] * c
-            formula_p = LinearPredicate(pre_mat.reshape((1, -1)), b)
+            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name='p'+str(i))
             pre_mat[i + 1] = - coef[i - 1] * c
-            formula_n = LinearPredicate(pre_mat.reshape((1, -1)), b)
+            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name='n'+str(i))
 
             try:
-                formula &= formula_p | formula_n
+                formula |= formula_p | formula_n
             except:
                 formula = formula_p | formula_n
             

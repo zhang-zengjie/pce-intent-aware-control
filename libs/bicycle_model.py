@@ -107,7 +107,7 @@ class BicycleModel(NonlinearSystem):
     def update_pce_parameter(self):
 
         A, B, E = get_linear_matrix(self.x0, self.delta_t)
-
+        '''
         coef = self.basis.generate_coefficients_multiple(self.fn)
         b_hat = coef[1]
         e_hat = coef[0]
@@ -120,7 +120,34 @@ class BicycleModel(NonlinearSystem):
         self.Dp = np.zeros((self.m, self.m))
         self.Ep = np.array([E[0] + e_hat[s] * E[1] for s in range(self.basis.L)])
         # self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
+        '''
 
+        coef = self.basis.generate_coefficients_multiple(self.fn)
+
+        b_hat_1 = coef[1]
+        e_hat_1 = coef[0]
+
+        a_hat_0 = np.zeros(b_hat_1.shape)
+        a_hat_1 = np.zeros(b_hat_1.shape)
+        b_hat_0 = np.zeros(b_hat_1.shape)
+        e_hat_0 = np.zeros(b_hat_1.shape)
+
+        a_hat_0[0] = 1
+        a_hat_1[0] = 1
+        b_hat_0[0] = 1
+        e_hat_0[0] = 1
+
+        a_hat = np.array([a_hat_0, a_hat_1])
+        b_hat = np.array([b_hat_0, b_hat_1])
+        e_hat = np.array([e_hat_0, e_hat_1])
+        
+
+        self.Ap = np.array([[sum([a_hat[i] @ self.basis.psi[s][j] * A[i] for i in [0, 1]]) for j in range(self.basis.L)] for s in range(self.basis.L)])
+        self.Bp = np.array([sum([b_hat[i][s] * B[i] for i in [0, 1]]) for s in range(self.basis.L)])
+        self.Cp = np.zeros((self.m, self.basis.L * self.n))
+        self.Dp = np.zeros((self.m, self.m))
+        self.Ep = np.array([sum([e_hat[i][s] * E[i] for i in [0, 1]]) for s in range(self.basis.L)])
+        # self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
 
 class LinearAffineSystem(LinearSystem):
     """
