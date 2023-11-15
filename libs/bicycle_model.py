@@ -36,7 +36,7 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, basis=None, delta_t=0.5, pce=False):
+    def __init__(self, x0, param, delta_t, basis=None, pce=False):
 
         self.n = 4
         self.m = 2
