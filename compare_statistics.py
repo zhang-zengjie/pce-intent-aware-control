@@ -31,7 +31,7 @@ B = PCEBasis(eta, q)
 M = 64
 
 nodes = eta.sample([M,])
-bicycle_pce = BicycleModel(zeta_0, nodes[:, 0], B, base_sampling_time, pce=True)
+bicycle_pce = BicycleModel(zeta_0, nodes[:, 0], base_sampling_time, B, pce=True)
 
 
 x_hat = np.zeros([N + 1, B.L, 4])
@@ -40,7 +40,7 @@ for i in range(N):
         x_hat[i + 1, :, :] = np.array([x_hat[i, s, :] + sum([bicycle_pce.Ap[s][j] @ x_hat[i, j, :] for j in range(B.L)]) + bicycle_pce.Bp[s] @ u[:, s] for s in range(B.L)]) + bicycle_pce.Ep
 
 
-bicycle = BicycleModel(zeta_0, nodes[:, 0])
+bicycle = BicycleModel(zeta_0, nodes[:, 0], base_sampling_time)
 
 mc_samples = np.zeros([M, N + 1, 4])
 mc_samples[:, 0, :] = zeta_0
@@ -64,9 +64,9 @@ pce_max = np.array([B.get_max_coef(x_hat[i]) for i in range(N + 1)])
 pce_coef = np.array([B.get_coef(x_hat[i], 0) for i in range(N + 1)])
 # Draw plots: mean
 
-pyplot.plot(np.linspace(0, 1, N+1), pce_mean.T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
+pyplot.plot(np.linspace(0, 1, N+1), pce_mean.T[3])
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[3])
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[3])
 '''
 # Draw plots: variance
 

@@ -1,5 +1,4 @@
 import numpy as np
-import chaospy as cp
 import matplotlib.pyplot as plt
 from libs.pce_basis import PCEBasis
 
@@ -11,23 +10,7 @@ lanes = {'right': 0,
          'left': 8}
 
 
-def gen_pce_specs(base_sampling_time, base_length, q, N):
-
-    np.random.seed(7)
-
-    # Sample delta_t
-    # delta_t = cp.Trunc(cp.Normal(base_sampling_time, 5e-1), lower=base_sampling_time - 1e-3, upper=base_sampling_time + 1e-3)
-
-    delta_t = base_sampling_time
-
-    # Sample length
-    # length = cp.Trunc(cp.Normal(base_length, 1e-4), lower=base_length - 1e-4, upper=base_length + 1e-4)
-    
-
-    delta = cp.Trunc(cp.Normal(0, 0.1), lower=-0.1, upper=0.1)
-    # delta = cp.Normal(0, 0.01)
-    length = cp.Uniform(lower=base_length - 1e-3, upper=base_length + 1e-3)
-    eta = cp.J(delta, length) # Generate the random variable instance
+def gen_pce_specs(q, N, eta):
 
     B = PCEBasis(eta, q)        # Initialize the PCE instance
 
@@ -54,37 +37,23 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     b = 5
 
-    mu_safe = B.probability_formula(a1, c1, b, eps) | B.probability_formula(a2, c2, b, eps) | B.probability_formula(a3, c3, b, eps)
+    mu_safe = B.probability_formula(a1, c1, 10, eps) | B.probability_formula(a2, c2, 10, eps) | B.probability_formula(a3, c3, 2, eps)
 
-    # mu_belief = B.variance_formula(a1, 2) & B.expectation_formula(o, c3, lanes['middle']) & B.expectation_formula(o, c4, v_lim)
-
-    mu_belief = B.variance_formula(a1, 2) & B.expectation_formula(o, c3, -lanes['middle']) & B.expectation_formula(o, a4, -v_lim)
-
-    # mu_belief = B.variance_formula(a1, 1)
-
-    neg_mu_belief = B.neg_variance_formula(a1, 2) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, c4, v_lim)
-
-    # neg_mu_belief = B.neg_variance_formula(a1, 0.9) | B.neg_variance_formula(a3, 0.9) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
+    mu_belief = B.variance_formula(a1, 20) & B.expectation_formula(o, c3, -lanes['middle']) & B.expectation_formula(o, c4, -v_lim)
+    neg_mu_belief = B.neg_variance_formula(a1, 20) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
 
     mu_overtake = B.expectation_formula(a3, o, lanes['slow'] - 0.01) & B.expectation_formula(c3, o, - lanes['slow'] - 0.011) \
                     & B.expectation_formula(a1, c1, 2*b) \
-                    & B.expectation_formula(a5, o, - 0.000001).always(0, 3) & B.expectation_formula(c5, o, - 0.000001).always(0, 3)
-    
-    mu_drive = B.expectation_formula(a3, o, lanes['fast'] - 0.01) & B.expectation_formula(c3, o, - lanes['fast'] - 0.011)
+                    & B.expectation_formula(a5, o, - 0.000001).always(0, 3) & B.expectation_formula(c5, o, - 0.000001).always(0, 3) 
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = mu_belief.always(0, N)
     phi_neg_belief = neg_mu_belief.eventually(0, N)
     phi_overtake = mu_overtake.eventually(0, N-3)
-    phi_drive = mu_drive.always(0, N)
 
-    phi = phi_neg_belief | phi_overtake
+    phi = (phi_neg_belief | phi_overtake) & phi_safe
 
-    # phi = (phi_neg_belief | phi_overtake) | (phi_belief | phi_drive)
-
-    # phi = (phi_neg_belief | phi_overtake) & (phi_belief | phi_drive)
-
-    return B, phi, phi_belief, phi_neg_belief, mu_belief, neg_mu_belief
+    return B, phi
 
 
 def visualize(x, z0, v, B, bicycle):
@@ -92,16 +61,13 @@ def visualize(x, z0, v, B, bicycle):
     from matplotlib.patches import Rectangle
 
     N = x.shape[1]-1
-    H = 500
+    H = 600
 
-    fig, ax = plt.subplots()
+    plt.figure(figsize=(5,2))
 
-    ax.plot(lanes['left'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
-    ax.plot(lanes['middle'] * np.ones((H, )), linestyle='dashed', linewidth=1, color='black')
-    ax.plot(lanes['right'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
-
-    # Plot the trajectory of the ego vehicle (EV)
-    p = ax.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
+    plt.plot(lanes['left'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
+    plt.plot(lanes['middle'] * np.ones((H, )), linestyle='dashed', linewidth=1, color='black')
+    plt.plot(lanes['right'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
 
     M = 64
 
@@ -111,22 +77,31 @@ def visualize(x, z0, v, B, bicycle):
     # Generate the sampled trajectories of the obstacle vehicle (OV) 
     mc_samples_linear = np.zeros([M, N + 1, 4])
     mc_samples_linear[:, 0, :] = z0
+
     for i in range(M):
         bicycle.update_parameter(nodes[:, i])
         for j in range(N):
             mc_samples_linear[i, j + 1, :] = mc_samples_linear[i, j, :] + bicycle.Al @ mc_samples_linear[i, j, :] + bicycle.Bl @ v[:, j] + bicycle.El
 
+    # offset = np.mean(mc_samples_linear[:, -1, 0])
+
+    # z_mean = np.mean(mc_samples_linear[:, :, 0], axis=0)
+
+# Plot the trajectory of the ego vehicle (EV)
+    tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
+    p1, = plt.plot(x[0, -1], x[1, -1], alpha=0.8, color='red', marker="D", markersize=8)
+
     # Plot the trajectories of the obstacle vehicle (OV) 
     for i in range(M):
-        ax.plot(mc_samples_linear[i, :, 0], mc_samples_linear[i, :, 1])
-        ax.add_patch(Rectangle(xy=(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-
+        tr2, = plt.plot(mc_samples_linear[i, :, 0], mc_samples_linear[i, :, 1], color=(0, 0, 0.5))
+        # ax.add_patch(Rectangle(xy=(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
+        p2, = plt.plot(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1], alpha=0.8, color=(0, 0, 0.5), marker="D", markersize=8)
 
     plt.xlim([0, H])
     # plt.ylim([0, 5])
     plt.xlabel('x')
     plt.ylabel('y')
-    # plt.legend([p1, p2], ['ego', 'obstacle'], loc='lower left')
+    # plt.legend([tr1, p1, tr2, p2], ['ego trajectory', 'ego position', 'obstacle trajectory', 'obstacle position'], loc='upper right', fontsize="10", ncol=2)
 
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
