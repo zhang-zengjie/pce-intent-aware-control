@@ -63,17 +63,17 @@ pce_std = np.array([B.get_std_from_coef(x_hat[i]) for i in range(N + 1)])
 pce_max = np.array([B.get_max_coef(x_hat[i]) for i in range(N + 1)])
 pce_coef = np.array([B.get_coef(x_hat[i], 0) for i in range(N + 1)])
 # Draw plots: mean
-'''
-pyplot.plot(np.linspace(0, 1, N+1), pce_mean.T[0])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[0])
-pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[0])
 
+pyplot.plot(np.linspace(0, 1, N+1), pce_mean.T[1])
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0).T[1])
+pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0).T[1])
+'''
 # Draw plots: variance
 
 pyplot.plot(np.linspace(0, 1, N+1), pce_std.T[0])
 pyplot.plot(np.linspace(0, 1, N+1), np.std(mc_samples, 0).T[0])
 pyplot.plot(np.linspace(0, 1, N+1), np.std(mc_samples_linear, 0).T[0])
-'''
-pyplot.plot(np.linspace(0, 1, N+1), pce_max.T[0])
 
+pyplot.plot(np.linspace(0, 1, N+1), pce_max.T[0])
+'''
 pyplot.show()
