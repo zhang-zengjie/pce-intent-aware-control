@@ -51,4 +51,5 @@ for i in range(z.shape[2]):
 # Visualize the results
 # mu_belief.robustness(xx, 1)
 mu_belief.robustness(xx, 30)
+phi_belief.robustness(xx, 0)
 visualize(x, z0, v, B, sys2)

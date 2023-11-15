@@ -24,7 +24,7 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
     # length = cp.Trunc(cp.Normal(base_length, 1e-4), lower=base_length - 1e-4, upper=base_length + 1e-4)
     
 
-    delta = cp.Trunc(cp.Normal(0, 0.01), lower=-0.01, upper=0.01)
+    delta = cp.Trunc(cp.Normal(0, 0.1), lower=-0.1, upper=0.1)
     # delta = cp.Normal(0, 0.01)
     length = cp.Uniform(lower=base_length - 1e-3, upper=base_length + 1e-3)
     eta = cp.J(delta, length) # Generate the random variable instance
@@ -56,11 +56,13 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
 
     mu_safe = B.probability_formula(a1, c1, b, eps) | B.probability_formula(a2, c2, b, eps) | B.probability_formula(a3, c3, b, eps)
 
-    # mu_belief = B.variance_formula(a1, 0.9) & B.variance_formula(a3, 0.9) & B.expectation_formula(o, c3, lanes['middle']) & B.expectation_formula(o, c4, v_lim)
+    # mu_belief = B.variance_formula(a1, 2) & B.expectation_formula(o, c3, lanes['middle']) & B.expectation_formula(o, c4, v_lim)
 
-    mu_belief = B.variance_formula(a1, 1)
+    mu_belief = B.variance_formula(a1, 2) & B.expectation_formula(o, c3, -lanes['middle']) & B.expectation_formula(o, a4, -v_lim)
 
-    neg_mu_belief = B.neg_variance_formula(a1, 1)
+    # mu_belief = B.variance_formula(a1, 1)
+
+    neg_mu_belief = B.neg_variance_formula(a1, 2) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, c4, v_lim)
 
     # neg_mu_belief = B.neg_variance_formula(a1, 0.9) | B.neg_variance_formula(a3, 0.9) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
 
@@ -76,7 +78,7 @@ def gen_pce_specs(base_sampling_time, base_length, q, N):
     phi_overtake = mu_overtake.eventually(0, N-3)
     phi_drive = mu_drive.always(0, N)
 
-    phi = phi_overtake
+    phi = phi_neg_belief | phi_overtake
 
     # phi = (phi_neg_belief | phi_overtake) | (phi_belief | phi_drive)
 
