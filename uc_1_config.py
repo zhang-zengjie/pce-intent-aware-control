@@ -21,30 +21,20 @@ def gen_pce_specs(q, N, eta):
     o = np.zeros((4, ))
 
     a1 = np.array([1, 0, 0, 0])
-    c1 = np.array([-1, 0, 0, 0])
-
-    a2 = np.array([-1, 0, 0, 0])
-    c2 = np.array([1, 0, 0, 0])
-
-    a3 = np.array([0, 1, 0, 0])
-    c3 = np.array([0, -1, 0, 0])
-
+    a2 = np.array([0, 1, 0, 0])
+    a3 = np.array([0, 0, 1, 0])
     a4 = np.array([0, 0, 0, 1])
-    c4 = np.array([0, 0, 0, -1])
-
-    a5 = np.array([0, 0, 1, 0])
-    c5 = np.array([0, 0, -1, 0])
 
     b = 5
 
-    mu_safe = B.probability_formula(a1, c1, 10, eps) | B.probability_formula(a2, c2, 10, eps) | B.probability_formula(a3, c3, 2, eps)
+    mu_safe = B.probability_formula(a1, -a1, 10, eps) | B.probability_formula(-a1, a1, 10, eps) | B.probability_formula(a2, -a2, 2, eps)
 
-    mu_belief = B.variance_formula(a1, 20) & B.expectation_formula(o, c3, -lanes['middle']) & B.expectation_formula(o, c4, -v_lim)
-    neg_mu_belief = B.neg_variance_formula(a1, 20) | B.expectation_formula(o, a3, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
+    mu_belief = B.variance_formula(a1, 20) & B.expectation_formula(o, -a2, -lanes['middle']) & B.expectation_formula(o, -a4, -v_lim)
+    neg_mu_belief = B.neg_variance_formula(a1, 20) | B.expectation_formula(o, a2, lanes['middle']) | B.expectation_formula(o, a4, v_lim)
 
-    mu_overtake = B.expectation_formula(a3, o, lanes['slow'] - 0.01) & B.expectation_formula(c3, o, - lanes['slow'] - 0.011) \
-                    & B.expectation_formula(a1, c1, 2*b) \
-                    & B.expectation_formula(a5, o, - 0.000001).always(0, 3) & B.expectation_formula(c5, o, - 0.000001).always(0, 3) 
+    mu_overtake = B.expectation_formula(a2, o, lanes['slow'] - 0.01) & B.expectation_formula(-a2, o, - lanes['slow'] - 0.011) \
+                    & B.expectation_formula(a1, -a1, 2*b) \
+                    & B.expectation_formula(a3, o, - 1e-6).always(0, 3) & B.expectation_formula(-a3, o, - 1e-6).always(0, 3) 
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = mu_belief.always(0, N)
@@ -54,6 +44,20 @@ def gen_pce_specs(q, N, eta):
     phi = (phi_neg_belief | phi_overtake) & phi_safe
 
     return B, phi
+
+
+def model_checking(x, z, spec, k):
+
+    L = (1 + z.shape[0]) * z.shape[1]
+    xx = np.zeros([L, z.shape[2]])
+
+    for i in range(z.shape[2]):
+        xx[:z.shape[1], i] = x[:, i]
+        xx[z.shape[1]:, i] = z[:, :, i].reshape(1, -1)[0]
+
+    rho = spec.robustness(xx, k)
+
+    return rho
 
 
 def visualize(x, z0, v, B, bicycle):
@@ -83,11 +87,7 @@ def visualize(x, z0, v, B, bicycle):
         for j in range(N):
             mc_samples_linear[i, j + 1, :] = mc_samples_linear[i, j, :] + bicycle.Al @ mc_samples_linear[i, j, :] + bicycle.Bl @ v[:, j] + bicycle.El
 
-    # offset = np.mean(mc_samples_linear[:, -1, 0])
-
-    # z_mean = np.mean(mc_samples_linear[:, :, 0], axis=0)
-
-# Plot the trajectory of the ego vehicle (EV)
+    # Plot the trajectory of the ego vehicle (EV)
     tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
     p1, = plt.plot(x[0, -1], x[1, -1], alpha=0.8, color='red', marker="D", markersize=8)
 
@@ -98,15 +98,11 @@ def visualize(x, z0, v, B, bicycle):
         p2, = plt.plot(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1], alpha=0.8, color=(0, 0, 0.5), marker="D", markersize=8)
 
     plt.xlim([0, H])
-    # plt.ylim([0, 5])
     plt.xlabel('x')
     plt.ylabel('y')
     # plt.legend([tr1, p1, tr2, p2], ['ego trajectory', 'ego position', 'obstacle trajectory', 'obstacle position'], loc='upper right', fontsize="10", ncol=2)
 
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
-
-    # plt.figure()
-    # pu, = plt.plot(np.arange(0, N+1), u[0])
 
     plt.show()

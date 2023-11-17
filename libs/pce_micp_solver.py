@@ -119,7 +119,7 @@ class PCEMICPSolver(STLSolver):
             self.model.addConstr(x_min <= self.x[:, t])
             self.model.addConstr(self.x[:, t] <= x_max)
 
-    def AddQuadraticCost(self, Q, R, x_ref):
+    def AddQuadraticCost(self, Q, R, x_ref=np.array([0, 0, 0, 0])):
         self.cost += (self.x[:, 0] - x_ref) @ Q @ (self.x[:, 0] - x_ref) + self.u[:, 0] @ R @ self.u[:, 0]
         for t in range(1, self.T):
             self.cost += (self.x[:, t] - x_ref) @ Q @ (self.x[:, t] - x_ref) + self.u[:, t] @ R @ self.u[:, t]
