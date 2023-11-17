@@ -45,9 +45,11 @@ class BicycleModel(NonlinearSystem):
         self.basis = basis
         self.delta_t = delta_t
 
+        # Param list: bias (delta), length (l), intent (iota)
         self.fn = [
-            lambda z: z[0],
-            lambda z: 1/z[1]
+            lambda z: z[0],             # delta
+            lambda z: z[2]/z[1],        # iota/l
+            lambda z: z[2]
         ]
 
         self.update_initial(x0)
@@ -60,15 +62,15 @@ class BicycleModel(NonlinearSystem):
     def f(self, x, u):
 
         delta_t = self.delta_t
-        l = self.param[1]
-        delta = self.param[0]
+
+        delta, l, intent = self.param
 
         xx, yy, theta, v = x[0], x[1], x[2], x[3]
         gamma, a = u[0], u[1]
         xx += delta_t * v * math.cos(theta + gamma)
         yy += delta_t * v * math.sin(theta + gamma)
         theta += delta_t * v * math.sin(gamma)/l
-        v += delta_t * (a + delta)
+        v += delta_t * intent * (a + delta)
         return np.array([xx, yy, theta, v])
     
     def g(self, x, u):
@@ -76,16 +78,16 @@ class BicycleModel(NonlinearSystem):
     
     def get_linear_scalar(self):
 
-        f1, f2 = self.fn[0], self.fn[1]
+        f0, f1, f2 = self.fn
 
+        a0 = 1
+        b0 = f2(self.param)
+        e0 = 1
         a1 = 1
-        b1 = 1
-        e1 = 1
-        a2 = 1
-        b2 = f2(self.param)
-        e2 = f1(self.param)
+        b1 = f1(self.param)
+        e1 = f0(self.param)
 
-        return (a1, a2), (b1, b2), (e1, e2)
+        return (a0, a1), (b0, b1), (e0, e1)
     
     def update_initial(self, x0):
         self.x0 = x0
