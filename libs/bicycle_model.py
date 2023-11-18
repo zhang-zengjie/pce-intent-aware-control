@@ -36,11 +36,12 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, delta_t, basis=None, pce=False):
+    def __init__(self, x0, param, delta_t, basis=None, pce=False, name=None):
 
         self.n = 4
         self.m = 2
         self.p = 4
+        self.name = name
 
         self.basis = basis
         self.delta_t = delta_t
@@ -66,11 +67,11 @@ class BicycleModel(NonlinearSystem):
         delta, l, intent = self.param
 
         xx, yy, theta, v = x[0], x[1], x[2], x[3]
-        gamma, a = u[0], u[1]
+        gamma, a = intent * u
         xx += delta_t * v * math.cos(theta + gamma)
         yy += delta_t * v * math.sin(theta + gamma)
         theta += delta_t * v * math.sin(gamma)/l
-        v += delta_t * intent * (a + delta)
+        v += delta_t *  (a + delta)
         return np.array([xx, yy, theta, v])
     
     def g(self, x, u):
@@ -150,6 +151,46 @@ class BicycleModel(NonlinearSystem):
         self.Dp = np.zeros((self.m, self.m))
         self.Ep = np.array([sum([e_hat[i][s] * E[i] for i in [0, 1]]) for s in range(self.basis.L)])
         # self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
+
+    def predict(self, u, N):
+
+        states = np.zeros([self.n, N + 1])
+        states[:, 0] = self.x0
+        for t in range(N):
+            states[:, t + 1] = self.f(states[:, t], u[:, t])
+
+        return states
+
+    def predict_linear(self, u, N):
+        
+        states = np.zeros([self.n, N + 1])
+        states[:, 0] = self.x0
+        for t in range(N):
+            states[:, t + 1] = states[:, t] + self.Al @ states[:, t] + self.Bl @ u[:, t] + self.El
+
+        return states
+        
+    def predict_pce(self, u, N):
+
+        states = np.zeros([N + 1, self.basis.L, self.n])
+        
+        #np.zeros((self.basis.L, self.n, N + 1))
+
+        # Initial condition
+        #states[0, :, 0] = self.x0
+        states[0][0] = self.x0
+        # Dynamics
+        '''
+        for t in range(N):
+            for s in range(self.basis.L):
+                states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ u[:, t] + self.Ep[s]
+        '''
+        for i in range(N):
+            states[i + 1, :, :] = np.array([states[i, s, :] + sum([self.Ap[s][j] @ states[i, j, :] for j in range(self.basis.L)]) + self.Bp[s] @ u[:, s] for s in range(self.basis.L)]) + self.Ep
+
+
+        return states
+
 
 class LinearAffineSystem(LinearSystem):
     """

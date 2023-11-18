@@ -43,6 +43,10 @@ eta = cp.J(bias, length, intent) # Generate the random variable instance
 x0 = np.array([0, lanes['fast'], 0, 25])            # Initial position of the ego vehicle (EV)
 z0 = np.array([50, lanes['slow'], 0, 25])           # Initial position of the obstacle vehicle (OV)
 
+
+
+
+
 # Generate the PCE instance and the specification
 B, phi = gen_pce_specs(q, N, eta)
 

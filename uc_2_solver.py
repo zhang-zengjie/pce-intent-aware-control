@@ -86,7 +86,7 @@ class PCEMICPSolver(STLSolver):
         # Create optimization variables
 
         self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
-        self.z = self.model.addMVar((sys_z[0].basis.L, self.sys.n, self.T), lb=-float('inf'), name='z')
+        self.z0 = self.model.addMVar((sys_z[0].basis.L, self.sys.n, self.T), lb=-float('inf'), name='z0')
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
