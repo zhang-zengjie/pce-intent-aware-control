@@ -2,14 +2,14 @@ import numpy as np
 from libs.micp_pce_solver import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
 from stlpy.systems.linear import DoubleIntegrator
-from config.uc_2_config import visualize, gen_pce_specs
+from config.uc_2_config import visualize, oppo_specs, pedes_specs
 from config.uc_2_config import l as lane
 import math
 
 import chaospy as cp
 
 # The assumed control input of the obstacle vehicle (OV)
-ASSUMED_INPUT = "speed_up"
+
 Ts = 0.5    # The baseline value of sampling time delta_t
 l = 4             # The baseline value of the vehicle length
 q = 2                       # The polynomial order
@@ -19,31 +19,40 @@ np.random.seed(7)
 
 # The assumed control mode of the obstacle vehicle (OV)
 
-sigma = 0.01
-gamma = np.linspace(0, 0, N)
-a = np.linspace(0, -0.5, N)
-ou = np.array([gamma, a])
-hu = np.array([gamma, a])
+gamma_o = np.linspace(0, 0, N)
+a_o = np.linspace(0, -0.8, N)
+ou = np.array([gamma_o, a_o])
 
-bias = cp.Normal(0, sigma)
-length = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
-intent = cp.DiscreteUniform(-1, 1)
-eta = cp.J(bias, length, intent) # Generate the random variable instance
-
-x0 = np.array([-lane*2, -lane/2, 0, 0.5])            # Initial position of the ego vehicle (EV)
-z0 = np.array([lane*3, lane/2, math.pi, 2])           # Initial position of the obstacle vehicle (OV)
-h0 = np.array([lane, 1.2, lane, math.pi, 0.4])
+gamma_h = np.linspace(0, 0, N)
+a_h = np.linspace(0, 0.4, N)
+hu = np.array([gamma_h, a_h])
 
 # Generate the PCE instance and the specification
-B, phi = gen_pce_specs(q, N, eta)
 
-ego = BicycleModel(x0, [0, l, 1], Ts, name="ego")                  # Dynamic model of the ego vehicle (EV)
-oppo = BicycleModel(z0, [0, l, 1], Ts, B, pce=True, name="oppo")     # Dynamic model of the obstacle vehicle (OV)
+bias_o = cp.Normal(0, 1e-2)
+length_o = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
+intent_o = cp.DiscreteUniform(-1, 1)
+eta_o = cp.J(bias_o, length_o, intent_o) # Generate the random variable instance
+Bo, phi_o = oppo_specs(q, N, eta_o, "oppo")
 
-pedes = BicycleModel(z0, [0, l, 1], Ts, B, pce=True, name="pedes")
+bias_p = cp.Normal(0, 0.01)
+length_p = cp.Uniform(lower=0.5-1e-3, upper=0.5+1e-3)
+# intent_p = cp.Binomial(1, 0.3)
+intent_p = cp.DiscreteUniform(0, 1)
+eta_p = cp.J(bias_p, length_p, intent_p) # Generate the random variable instance
+Bp, phi_p = pedes_specs(q, N, eta_p, "pedes")
 
+x0 = np.array([-lane*2, -lane/2, 0, 0.5])            # Initial position of the ego vehicle (EV)
+z0 = np.array([8*lane, lane/2, math.pi, 6])           # Initial position of the obstacle vehicle (OV)
+h0 = np.array([1.2*lane, 1.2*lane, math.pi, 0])
+
+ego = BicycleModel(x0, [0, l, 1], Ts, name="ego", color='red')                  # Dynamic model of the ego vehicle (EV)
+oppo = BicycleModel(z0, [0, l, 1], Ts, useq=ou, basis=Bo, pce=True, name="oppo", color=(0, 0, 0.5))     # Dynamic model of the obstacle vehicle (OV)
+pedes = BicycleModel(h0, [0, l, 1], Ts, useq=hu, basis=Bp, pce=True, name="pedes", color=(1, 0.6, 0.2))
+
+phi = phi_o & phi_p
 # Initialize the solver
-solver = PCEMICPSolver(phi, ego, [oppo, pedes], [ou, hu], N, robustness_cost=False)
+solver = PCEMICPSolver(phi, ego, [oppo, pedes], N, robustness_cost=True)
 
 # Adding input constraints (not necessary if input is in the cost function)
 # u_min = np.array([[-0.5, -50]]).T
@@ -63,4 +72,5 @@ z = solver.predict[solver.index["oppo"]]
 
 # model_checking(x, z, phi, 0)
 
-visualize(x, z0, ou, B, oppo)
+# visualize(x, z0, ou, Bo, Bp, oppo, pedes)
+visualize(x, [oppo, pedes])

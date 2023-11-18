@@ -28,23 +28,23 @@ M = 64
 
 nodes = eta.sample([M,])
 
-bicycle_pce = BicycleModel(x0, [0, l, 1], Ts, B, pce=True, name="pce")
+bicycle_pce = BicycleModel(x0, [0, l, 1], Ts, useq=u, basis=B, pce=True, name="pce")
 bicycle_pce.update_initial(x0)
-x_hat = bicycle_pce.predict_pce(u, N)
+x_hat = bicycle_pce.predict_pce(N)
 
-bicycle = BicycleModel(x0, [nodes[0, 0], nodes[1, 0], 1], Ts, name="nonlinear")
+bicycle = BicycleModel(x0, [0, l, 1], Ts, useq=u, name="nonlinear")
 mc_samples = np.zeros([M, 4, N + 1])
 for i in range(M):
     bicycle.update_initial(x0)
-    bicycle.update_parameter([nodes[0, i], nodes[1, i], 1])
-    mc_samples[i] = bicycle.predict(u, N)
+    bicycle.update_parameter(nodes[:, i])
+    mc_samples[i] = bicycle.predict(N)
 
-bicycle_linear = BicycleModel(x0, [nodes[0, 0], nodes[1, 0], 1], Ts, name="linear")
+bicycle_linear = BicycleModel(x0, [0, l, 1], Ts, useq=u, name="linear")
 mc_samples_linear = np.zeros([M, 4, N + 1])
 for i in range(M):
     bicycle_linear.update_initial(x0)
-    bicycle_linear.update_parameter([nodes[0, i], nodes[1, i], 1])
-    mc_samples_linear[i] = bicycle_linear.predict_linear(u, N)
+    bicycle_linear.update_parameter(nodes[:, i])
+    mc_samples_linear[i] = bicycle_linear.predict_linear(N)
         
 
 pce_mean = np.array([B.get_mean_from_coef(x_hat[:, :, i]) for i in range(N + 1)])

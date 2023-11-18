@@ -36,15 +36,17 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, delta_t, basis=None, pce=False, name=None):
+    def __init__(self, x0, param, delta_t, useq=None, basis=None, pce=False, name=None, color=None):
 
         self.n = 4
         self.m = 2
         self.p = 4
         self.name = name
+        self.useq = useq
 
         self.basis = basis
         self.delta_t = delta_t
+        self.color = color
 
         # Param list: bias (delta), length (l), intent (iota)
         self.fn = [
@@ -92,6 +94,10 @@ class BicycleModel(NonlinearSystem):
     def update_initial(self, x0):
         self.x0 = x0
 
+    def update_control(self, useq):
+
+        self.useq = useq
+
     def update_parameter(self, param):
 
         self.param = param
@@ -135,26 +141,32 @@ class BicycleModel(NonlinearSystem):
         self.Ep = np.array([sum([e_hat[i][s] * E[i] for i in [0, 1]]) for s in range(self.basis.L)])
         # self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
 
-    def predict(self, u, N):
+    def predict(self, N):
+
+        assert self.useq.shape[1] == N
 
         states = np.zeros([self.n, N + 1])
         states[:, 0] = self.x0
         for t in range(N):
-            states[:, t + 1] = self.f(states[:, t], u[:, t])
+            states[:, t + 1] = self.f(states[:, t], self.useq[:, t])
 
         return states
 
-    def predict_linear(self, u, N):
+    def predict_linear(self, N):
         
+        assert self.useq.shape[1] == N
+
         states = np.zeros([self.n, N + 1])
         states[:, 0] = self.x0
         for t in range(N):
-            states[:, t + 1] = states[:, t] + self.Al @ states[:, t] + self.Bl @ u[:, t] + self.El
+            states[:, t + 1] = states[:, t] + self.Al @ states[:, t] + self.Bl @ self.useq[:, t] + self.El
 
         return states
         
-    def predict_pce(self, u, N):
+    def predict_pce(self, N):
 
+        assert self.useq.shape[1] == N
+        
         states = np.zeros([self.basis.L, self.n, N + 1])
 
         # Initial condition
@@ -163,7 +175,7 @@ class BicycleModel(NonlinearSystem):
         
         for t in range(N):
             for s in range(self.basis.L):
-                states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ u[:, t] + self.Ep[s]
+                states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
 
         return states
 
