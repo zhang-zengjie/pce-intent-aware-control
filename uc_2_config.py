@@ -61,6 +61,8 @@ def visualize(x, z0, v, B, bicycle):
 
     plt.figure(figsize=(5,5))
     
+    N = x.shape[1]-1
+
     gray = (102/255, 102/255, 102/255)
     light_gray = (230/255, 230/255, 230/255)
     # Draw the environment
@@ -82,7 +84,29 @@ def visualize(x, z0, v, B, bicycle):
 
     # Plot the trajectory of the ego vehicle (EV)
     tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
-    p1, = plt.plot(x[0, -1], x[1, -1], alpha=0.8, color='red', marker="D", markersize=8)
+    p1, = plt.plot(x[0, 22], x[1, 22], alpha=0.8, color='red', marker="D", markersize=8)
+
+
+    M = 64
+
+    # Sample parameters from distribution eta
+    nodes = B.eta.sample([M, ])
+
+    # Generate the sampled trajectories of the obstacle vehicle (OV) 
+    mc_samples_linear = np.zeros([M, N + 1, 4])
+    mc_samples_linear[:, 0, :] = z0
+
+    for i in range(M):
+        bicycle.update_parameter(nodes[:, i])
+        for j in range(N):
+            mc_samples_linear[i, j + 1, :] = mc_samples_linear[i, j, :] + bicycle.Al @ mc_samples_linear[i, j, :] + bicycle.Bl @ v[:, j] + bicycle.El
+
+    for i in range(M):
+        tr2, = plt.plot(mc_samples_linear[i, :, 0], mc_samples_linear[i, :, 1], color=(0, 0, 0.5))
+        # ax.add_patch(Rectangle(xy=(mc_samples_linear[i, -1, 0]-4, mc_samples_linear[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
+        p2, = plt.plot(mc_samples_linear[i, 22, 0], mc_samples_linear[i, 22, 1], alpha=0.8, color=(0, 0, 0.5), marker="D", markersize=8)
+        p2, = plt.plot(mc_samples_linear[i, 0, 0], mc_samples_linear[i, 0, 1], alpha=0.8, color=(0, 0, 0.5), marker="*", markersize=8)
+
 
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42

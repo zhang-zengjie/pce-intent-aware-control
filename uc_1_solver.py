@@ -65,12 +65,7 @@ class PCEMICPSolver(STLSolver):
         self.M = float(M)
         self.presolve = presolve
 
-        self.sys_z = sys_z
-
-        self.z0 = sys_z.x0
-        self.L = sys_z.basis.L
-        self.v = v
-        
+        assert len(sys_z) == len(v)
 
         # Set up the optimization problem
         self.model = gp.Model("PCE_STL_MICP")
@@ -91,14 +86,14 @@ class PCEMICPSolver(STLSolver):
         # Create optimization variables
 
         self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
-        self.z = self.model.addMVar((self.L, self.sys.n, self.T), lb=-float('inf'), name='z')
+        self.z = self.model.addMVar((sys_z[0].basis.L, self.sys.n, self.T), lb=-float('inf'), name='z')
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
 
         # Add cost and constraints to the optimization problem
         self.AddDynamicsConstraints()
-        self.AddPCEDynamicsConstraints()
+        self.AddPCEDynamicsConstraints(sys_z[0], v[0])
         
         self.AddSTLConstraints()
         self.AddRobustnessConstraint()
@@ -171,17 +166,17 @@ class PCEMICPSolver(STLSolver):
         for t in range(self.T - 1):
             self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys.E )
             
-    def AddPCEDynamicsConstraints(self):
+    def AddPCEDynamicsConstraints(self, sys_z, v):
 
         # Initial condition
-        self.model.addConstr(self.z[0, :, 0] == self.z0)
-        for i in range(1, self.L):
+        self.model.addConstr(self.z[0, :, 0] == sys_z.x0)
+        for i in range(1, sys_z.basis.L):
             self.model.addConstr(self.z[i, :, 0] == np.zeros((self.sys.n, )))
 
         # Dynamics
         for t in range(self.T - 1):
-            for s in range(self.L):
-                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([self.sys_z.Ap[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + self.sys_z.Bp[s] @ self.v[:, t] + self.sys_z.Ep[s])
+            for s in range(sys_z.basis.L):
+                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([sys_z.Ap[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + sys_z.Bp[s] @ v[:, t] + sys_z.Ep[s])
 
 
     def AddSTLConstraints(self):
