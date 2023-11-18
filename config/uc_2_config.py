@@ -21,20 +21,16 @@ def gen_pce_specs(q, N, eta):
     a3 = np.array([0, 0, 1, 0])
     a4 = np.array([0, 0, 0, 1])
 
-    reach = B.expectation_formula(a1, o, l/2 - 1e-2).always(0, 3) & B.expectation_formula(-a1, o, -l/2 - 1e-2).always(0, 3) \
-            & B.expectation_formula(a3, o, math.pi-1e-6).always(0, 3) & B.expectation_formula(-a3, o, -math.pi-1e-6).always(0, 3)
+    reach = B.expectation_formula(a1, o, l/2 - 1e-2, name="oppo").always(0, 3) & B.expectation_formula(-a1, o, -l/2 - 1e-2, name="oppo").always(0, 3) \
+            & B.expectation_formula(a3, o, math.pi-1e-6, name="oppo").always(0, 3) & B.expectation_formula(-a3, o, -math.pi-1e-6, name="oppo").always(0, 3)
 # & B.expectation_formula(-a4, o, 2) \
 
-    between = B.expectation_formula(a2, o, -l/2 - 1e-2) & B.expectation_formula(-a2, o, l/2 - 1e-2)
-
-    out = B.expectation_formula(a1, o, -1.2*l)
-
+    between = B.expectation_formula(a2, o, -l/2 - 1e-2, name="oppo") & B.expectation_formula(-a2, o, l/2 - 1e-2, name="oppo")
+    out = B.expectation_formula(a1, o, -1.2*l, name="oppo")
     keep = out | between
 
-    between_2 = B.expectation_formula(a1, o, l/2 - 1e-2) & B.expectation_formula(-a1, o, -l/2 - 1e-2)
-
-    ind = B.expectation_formula(-a2, o, -1.2*l)
-
+    between_2 = B.expectation_formula(a1, o, l/2 - 1e-2, name="oppo") & B.expectation_formula(-a1, o, -l/2 - 1e-2, name="oppo")
+    ind = B.expectation_formula(-a2, o, -1.2*l, name="oppo")
     keep_2 = ind | between_2
 
     phi = reach.eventually(0, N-3) & keep_2.always(0, N) & keep.always(0, N)
