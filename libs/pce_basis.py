@@ -70,7 +70,7 @@ class PCEBasis:
         
         return np.sqrt(Var)
     
-    def probability_formula(self, a, c, b, eps, name=None):
+    def probability_formula(self, a, c, b, eps, name):
 
         """
         Create STL formulas representing the chance constraint:
@@ -117,7 +117,7 @@ class PCEBasis:
 
         return formula
 
-    def expectation_formula(self, a, c, b, name=None):
+    def expectation_formula(self, a, c, b, name):
 
         """
         Create STL formulas representing the expectation constraint:
@@ -147,7 +147,7 @@ class PCEBasis:
 
         return formula
 
-    def variance_formula(self, c, b, name=None):
+    def variance_formula(self, c, b, name):
 
         """
         Create STL formulas representing the expectation constraint:
@@ -187,7 +187,7 @@ class PCEBasis:
 
         return formula
 
-    def neg_variance_formula(self, c, b, name=None):
+    def neg_variance_formula(self, c, b, name):
 
         """
         Create STL formulas representing the expectation constraint:

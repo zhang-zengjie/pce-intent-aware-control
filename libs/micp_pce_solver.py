@@ -41,8 +41,8 @@ class PCEMICPSolver(STLSolver):
         https://dx.doi.org/10.1146/annurev-control-053018-023717.
 
     :param spec:            An :class:`.STLFormula` describing the specification.
-    :param sys_x:           A :class:`.BicycleModel` describing the deterministic system dynamics.
-    :param sys_z:           A :class:`.BicycleModel` describing the PCE system dynamics.
+    :param ego:           A :class:`.BicycleModel` describing the deterministic system dynamics.
+    :param oppo:           A :class:`.BicycleModel` describing the PCE system dynamics.
     :param v:               A numpy array fixing the assumed control input of the PCE system.
     :param T:               A positive integer fixing the total number of timesteps :math:`T`.
     :param M:               (optional) A large positive scalar used to rewrite ``min`` and ``max`` as
@@ -55,17 +55,23 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, sys_x, sys_z, v, T, M=1000, 
+    def __init__(self, spec, ego, oppo, v, T, M=1000, 
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
 
-        sys = LinearAffineSystem(sys_x.Al, sys_x.Bl, sys_x.Cl, sys_x.Dl, sys_x.El)
-        super().__init__(spec, sys, sys_x.x0, T, verbose)
+        sys = LinearAffineSystem(ego.Al, ego.Bl, ego.Cl, ego.Dl, ego.El)
+        super().__init__(spec, sys, ego.x0, T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
 
-        assert len(sys_z) == len(v)
+        assert len(oppo) == len(v)
+
+        self.index = {}
+        for i in range(len(oppo)):
+            self.index[oppo[i].name] = i
+
+        self.predict = [oppo[i].predict_pce(v[i], T) for i in range(len(oppo))]
 
         # Set up the optimization problem
         self.model = gp.Model("PCE_STL_MICP")
@@ -86,14 +92,11 @@ class PCEMICPSolver(STLSolver):
         # Create optimization variables
 
         self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
-        self.z = self.model.addMVar((sys_z[0].basis.L, self.sys.n, self.T), lb=-float('inf'), name='z')
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
-
         # Add cost and constraints to the optimization problem
         self.AddDynamicsConstraints()
-        self.AddPCEDynamicsConstraints(sys_z[0], v[0])
         
         self.AddSTLConstraints()
         self.AddRobustnessConstraint()
@@ -139,7 +142,6 @@ class PCEMICPSolver(STLSolver):
             if self.verbose:
                 print("\nOptimal Solution Found!\n")
             x = self.x.X
-            z = self.z.X
             u = self.u.X
             rho = self.rho.X[0]
 
@@ -152,11 +154,10 @@ class PCEMICPSolver(STLSolver):
             if self.verbose:
                 print(f"\nOptimization failed with status {self.model.status}.\n")
             x = None
-            z = None
             u = None
             rho = -np.inf
 
-        return (x, z, u, rho, self.model.Runtime)
+        return (x, u, rho, self.model.Runtime)
 
     def AddDynamicsConstraints(self):
         # Initial condition
@@ -165,19 +166,6 @@ class PCEMICPSolver(STLSolver):
         # Dynamics
         for t in range(self.T - 1):
             self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys.E )
-            
-    def AddPCEDynamicsConstraints(self, sys_z, v):
-
-        # Initial condition
-        self.model.addConstr(self.z[0, :, 0] == sys_z.x0)
-        for i in range(1, sys_z.basis.L):
-            self.model.addConstr(self.z[i, :, 0] == np.zeros((self.sys.n, )))
-
-        # Dynamics
-        for t in range(self.T - 1):
-            for s in range(sys_z.basis.L):
-                self.model.addConstr( self.z[s, :, t + 1] == self.z[s, :, t] + sum([sys_z.Ap[s][j] @ self.z[j, :, t] for j in range(self.sys.n)]) + sys_z.Bp[s] @ v[:, t] + sys_z.Ep[s])
-
 
     def AddSTLConstraints(self):
         """
@@ -227,7 +215,9 @@ class PCEMICPSolver(STLSolver):
         if isinstance(formula, LinearPredicate):
             # a.T*x_t + c.T*_hat{z}_t - b + (1-z)*M >= rho
 
-            self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.z[:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
+            sys_num = self.index[formula.name]
+
+            self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.predict[sys_num][:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
 
             # Force z to be binary
             b = self.model.addMVar(1, vtype=GRB.BINARY)
