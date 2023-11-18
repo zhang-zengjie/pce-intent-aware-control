@@ -1,6 +1,7 @@
 import numpy as np
-from libs.pce_micp_solver import PCEMICPSolver
+from uc_2_solver import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
+from stlpy.systems.linear import DoubleIntegrator
 from uc_2_config import visualize, gen_pce_specs
 from uc_2_config import l as lane
 import math
@@ -18,9 +19,9 @@ np.random.seed(7)
 
 # The assumed control mode of the obstacle vehicle (OV)
 
-sigma = 0.5
+sigma = 0.02
 gamma = np.linspace(0, 0, N)
-a = np.linspace(0, -2, N)
+a = np.linspace(0, -0.5, N)
 ou = np.array([gamma, a])
 
 bias = cp.Normal(0, sigma)
@@ -29,13 +30,15 @@ intent = cp.DiscreteUniform(0, 1)
 eta = cp.J(bias, length, intent) # Generate the random variable instance
 
 x0 = np.array([-lane*2, -lane/2, 0, 0.5])            # Initial position of the ego vehicle (EV)
-z0 = np.array([lane*2, lane/2, math.pi, 0.5])           # Initial position of the obstacle vehicle (OV)
+z0 = np.array([lane*3, lane/2, math.pi, 2])           # Initial position of the obstacle vehicle (OV)
 
 # Generate the PCE instance and the specification
 B, phi = gen_pce_specs(q, N, eta)
 
 sys1 = BicycleModel(x0, [0, l, 1], Ts)                  # Dynamic model of the ego vehicle (EV)
 sys2 = BicycleModel(z0, [0, l, 1], Ts, B, pce=True)     # Dynamic model of the obstacle vehicle (OV)
+
+human = DoubleIntegrator(2)
 
 # Initialize the solver
 solver = PCEMICPSolver(phi, sys1, sys2, ou, N, robustness_cost=False)
@@ -49,6 +52,7 @@ solver = PCEMICPSolver(phi, sys1, sys2, ou, N, robustness_cost=False)
 Q = np.zeros([sys1.n, sys1.n])
 R = np.array([[1, 0], [0, 500]])
 solver.AddQuadraticCost(Q, R)
+
 
 # Solve the problem
 x, z, u, _, _ = solver.Solve()

@@ -96,8 +96,8 @@ class PCEBasis:
                             specifications.
         """
 
-        # coef = np.array([math.sqrt((1 - eps) * (self.L-1) * abs(cp.E(self.basis[k] ** 2, self.eta)) / eps) for k in range(1, self.L)])
-        coef = np.sqrt([(self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta)) for k in range(1, self.L)])
+        coef = np.array([math.sqrt((1 - eps) * (self.L-1) * abs(cp.E(self.basis[k] ** 2, self.eta)) / eps) for k in range(1, self.L)])
+        # coef = np.sqrt([(self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta)) for k in range(1, self.L)])
 
         
 
@@ -106,9 +106,9 @@ class PCEBasis:
             pre_mat[0] = a
             pre_mat[1] = c
             pre_mat[i + 1] = coef[i - 1] * c
-            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b)
+            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name=name)
             pre_mat[i + 1] = - coef[i - 1] * c
-            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b)
+            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name=name)
 
             try:
                 formula &= formula_p & formula_n
@@ -143,7 +143,7 @@ class PCEBasis:
         pre_mat[0] = a
         pre_mat[1] = c
 
-        formula = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b)
+        formula = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name=name)
 
         return formula
 
@@ -176,9 +176,9 @@ class PCEBasis:
         for i in range(1, self.L):
             pre_mat = np.zeros((self.L + 1, c.shape[0]))
             pre_mat[i + 1] = coef[i - 1] * c
-            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), -b, name='p'+str(i))
+            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), -b, name=name)
             pre_mat[i + 1] = - coef[i - 1] * c
-            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), -b, name='n'+str(i))
+            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), -b, name=name)
 
             try:
                 formula &= formula_p & formula_n
@@ -214,9 +214,9 @@ class PCEBasis:
         for i in range(1, self.L):
             pre_mat = np.zeros((self.L + 1, c.shape[0]))
             pre_mat[i + 1] = coef[i - 1] * c
-            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name='p'+str(i))
+            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name=name)
             pre_mat[i + 1] = - coef[i - 1] * c
-            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name='n'+str(i))
+            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name=name)
 
             try:
                 formula |= formula_p | formula_n

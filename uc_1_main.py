@@ -1,5 +1,5 @@
 import numpy as np
-from libs.pce_micp_solver import PCEMICPSolver
+from uc_1_solver import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
 from uc_1_config import gen_pce_specs, lanes, visualize, model_checking
 
@@ -50,7 +50,7 @@ sys1 = BicycleModel(x0, [0, l, 1], Ts)                  # Dynamic model of the e
 sys2 = BicycleModel(z0, [0, l, 1], Ts, B, pce=True)     # Dynamic model of the obstacle vehicle (OV)
 
 # Initialize the solver
-solver = PCEMICPSolver(phi, sys1, sys2, v, N, robustness_cost=False)
+solver = PCEMICPSolver(phi, sys1, [sys2], [v], N, robustness_cost=False)
 
 # Adding input constraints (not necessary if input is in the cost function)
 # u_min = np.array([[-0.5, -50]]).T
