@@ -40,17 +40,17 @@ length = cp.Uniform(lower=l - 1e-2, upper=l + 1e-2)
 intent = cp.Normal(1, 1e-3)
 eta = cp.J(bias, length, intent) # Generate the random variable instance
 
-x0 = np.array([0, lanes['fast'], 0, 25])            # Initial position of the ego vehicle (EV)
-z0 = np.array([50, lanes['slow'], 0, 25])           # Initial position of the obstacle vehicle (OV)
+e0 = np.array([0, lanes['fast'], 0, 25])            # Initial position of the ego vehicle (EV)
+o0 = np.array([50, lanes['slow'], 0, 25])           # Initial position of the obstacle vehicle (OV)
 
 # Generate the PCE instance and the specification
 B, phi, phs = gen_pce_specs(q, N, eta)
 
-ego = BicycleModel(x0, [0, l, 1], Ts, name="ego")                  # Dynamic model of the ego vehicle (EV)
-oppo = BicycleModel(z0, [0, l, 1], Ts, B, pce=True, name="oppo")     # Dynamic model of the obstacle vehicle (OV)
+ego = BicycleModel(e0, [0, l, 1], Ts, name="ego")                  # Dynamic model of the ego vehicle (EV)
+oppo = BicycleModel(o0, [0, l, 1], Ts, useq=v, basis=B, pce=True, name="oppo")     # Dynamic model of the obstacle vehicle (OV)
 
 # Initialize the solver
-solver = PCEMICPSolver(phi, ego, [oppo], [v], N, robustness_cost=False)
+solver = PCEMICPSolver(phi, ego, [oppo], N, robustness_cost=False)
 
 # Adding input constraints (not necessary if input is in the cost function)
 # u_min = np.array([[-0.5, -50]]).T
@@ -69,4 +69,4 @@ x, u, _, _ = solver.Solve()
 # z = solver.predict[solver.index["oppo"]]
 # print(model_checking(x, z, phs, 0))
 
-visualize(x, z0, v, B, oppo)
+visualize(x, oppo)

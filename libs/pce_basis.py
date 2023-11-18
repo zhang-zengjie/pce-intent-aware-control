@@ -3,7 +3,7 @@ import chaospy as cp
 from itertools import product
 import numpoly
 import math
-from stlpy.STL import LinearPredicate, NonlinearPredicate
+from stlpy.STL import LinearPredicate
 import copy
 
 

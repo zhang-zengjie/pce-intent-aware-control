@@ -55,7 +55,7 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, ego, oppo, v, T, M=1000, 
+    def __init__(self, spec, ego, oppo, T, M=1000, 
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
 
@@ -65,13 +65,11 @@ class PCEMICPSolver(STLSolver):
         self.M = float(M)
         self.presolve = presolve
 
-        assert len(oppo) == len(v)
-
         self.index = {}
         for i in range(len(oppo)):
             self.index[oppo[i].name] = i
 
-        self.predict = [oppo[i].predict_pce(v[i], T) for i in range(len(oppo))]
+        self.predict = [sys.predict_pce(T) for sys in oppo]
 
         # Set up the optimization problem
         self.model = gp.Model("PCE_STL_MICP")
