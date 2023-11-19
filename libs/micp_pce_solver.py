@@ -55,21 +55,21 @@ class PCEMICPSolver(STLSolver):
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, ego, oppo, T, M=1000, 
+    def __init__(self, spec, syses, T, M=1000, 
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
-
+        
+        self.predict = {}
+        for name, sys in syses.items():
+            if name != "ego":
+                self.predict[name] = sys.predict_pce(T)
+        
+        ego = syses["ego"]
         sys = LinearAffineSystem(ego.Al, ego.Bl, ego.Cl, ego.Dl, ego.El)
         super().__init__(spec, sys, ego.x0, T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
-
-        self.index = {}
-        for i in range(len(oppo)):
-            self.index[oppo[i].name] = i
-
-        self.predict = [sys.predict_pce(T) for sys in oppo]
 
         # Set up the optimization problem
         self.model = gp.Model("PCE_STL_MICP")
@@ -213,9 +213,10 @@ class PCEMICPSolver(STLSolver):
         if isinstance(formula, LinearPredicate):
             # a.T*x_t + c.T*_hat{z}_t - b + (1-z)*M >= rho
 
-            sys_num = self.index[formula.name]
-
-            self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.predict[sys_num][:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
+            if formula.name == "ego":
+                self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] - formula.b + (1 - z) * self.M >= self.rho)    
+            else:
+                self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.predict[formula.name][:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
 
             # Force z to be binary
             b = self.model.addMVar(1, vtype=GRB.BINARY)

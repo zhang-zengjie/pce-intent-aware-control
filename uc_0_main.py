@@ -54,16 +54,16 @@ pce_std = np.array([B.get_std_from_coef(x_hat[:, :, i]) for i in range(N + 1)])
 # pce_coef = np.array([B.get_coef(x_hat[i], 0) for i in range(N + 1)])
 
 # Draw plots: mean
-'''
+
 pyplot.plot(np.linspace(0, 1, N+1), pce_mean.T[0])
 pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples, 0)[0])
 # pyplot.plot(np.linspace(0, 1, N+1), np.mean(mc_samples_linear, 0)[0])
-'''
+
 
 # Draw plots: variance
-
+'''
 pyplot.plot(np.linspace(0, 1, N+1), pce_var.T[0])
 # pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples, 0)[0])
 pyplot.plot(np.linspace(0, 1, N+1), np.var(mc_samples_linear, 0)[0])
-
+'''
 pyplot.show()

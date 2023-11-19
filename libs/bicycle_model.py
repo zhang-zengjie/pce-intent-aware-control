@@ -143,7 +143,7 @@ class BicycleModel(NonlinearSystem):
 
     def predict(self, N):
 
-        assert self.useq.shape[1] == N
+        assert self.useq.shape[1] >= N
 
         states = np.zeros([self.n, N + 1])
         states[:, 0] = self.x0
@@ -154,7 +154,7 @@ class BicycleModel(NonlinearSystem):
 
     def predict_linear(self, N):
         
-        assert self.useq.shape[1] == N
+        assert self.useq.shape[1] >= N
 
         states = np.zeros([self.n, N + 1])
         states[:, 0] = self.x0
@@ -165,8 +165,8 @@ class BicycleModel(NonlinearSystem):
         
     def predict_pce(self, N):
 
-        assert self.useq.shape[1] == N
-        
+        assert self.useq.shape[1] >= N
+
         states = np.zeros([self.basis.L, self.n, N + 1])
 
         # Initial condition
@@ -176,7 +176,9 @@ class BicycleModel(NonlinearSystem):
         for t in range(N):
             for s in range(self.basis.L):
                 states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
-
+                for r in range(self.n):
+                    if math.isnan(states[s, r, t + 1]): 
+                        states[s, r, t + 1] = 0
         return states
 
 
