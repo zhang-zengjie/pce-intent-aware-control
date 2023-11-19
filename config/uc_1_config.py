@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from libs.pce_basis import PCEBasis
 
 
 lanes = {'right': 0,
@@ -9,41 +8,38 @@ lanes = {'right': 0,
          'fast': 6,
          'left': 8}
 
+eps = 0.05          # Probability threshold
+v_lim = 30          # Velocity limit
 
-def gen_pce_specs(q, N, eta):
+# Coefficients of the predicates
+o = np.zeros((4, ))
 
-    B = PCEBasis(eta, q)        # Initialize the PCE instance
+a1 = np.array([1, 0, 0, 0])
+a2 = np.array([0, 1, 0, 0])
+a3 = np.array([0, 0, 1, 0])
+a4 = np.array([0, 0, 0, 1])
 
-    eps = 0.05          # Probability threshold
-    v_lim = 30          # Velocity limit
+b = 5
 
-    # Coefficients of the predicates
-    o = np.zeros((4, ))
+def gen_pce_specs(B, N, sys_id):
 
-    a1 = np.array([1, 0, 0, 0])
-    a2 = np.array([0, 1, 0, 0])
-    a3 = np.array([0, 0, 1, 0])
-    a4 = np.array([0, 0, 0, 1])
+    mu_safe = B.probability_formula(a1, -a1, 10, eps, sys_id) | \
+        B.probability_formula(-a1, a1, 10, eps, sys_id) | \
+        B.probability_formula(a2, -a2, 2, eps, sys_id) | \
+        B.probability_formula(-a2, a2, 2, eps, sys_id)
 
-    b = 5
+    mu_belief = B.variance_formula(a1, 20, sys_id) & \
+        B.expectation_formula(o, -a2, -lanes['middle'], sys_id) & \
+        B.expectation_formula(o, -a4, -v_lim, sys_id)
+    neg_mu_belief = B.neg_variance_formula(a1, 20, sys_id) | \
+        B.expectation_formula(o, a2, lanes['middle'], sys_id) | \
+        B.expectation_formula(o, a4, v_lim, sys_id)
 
-    mu_safe = B.probability_formula(a1, -a1, 10, eps, name="oppo") | \
-        B.probability_formula(-a1, a1, 10, eps, name="oppo") | \
-        B.probability_formula(a2, -a2, 2, eps, name="oppo") | \
-        B.probability_formula(-a2, a2, 2, eps, name="oppo")
-
-    mu_belief = B.variance_formula(a1, 20, name="oppo") & \
-        B.expectation_formula(o, -a2, -lanes['middle'], name="oppo") & \
-        B.expectation_formula(o, -a4, -v_lim, name="oppo")
-    neg_mu_belief = B.neg_variance_formula(a1, 20, name="oppo") | \
-        B.expectation_formula(o, a2, lanes['middle'], name="oppo") | \
-        B.expectation_formula(o, a4, v_lim, name="oppo")
-
-    mu_overtake = B.expectation_formula(a2, o, lanes['slow'] - 0.01, name="oppo") & \
-        B.expectation_formula(-a2, o, - lanes['slow'] - 0.011, name="oppo") & \
-        B.expectation_formula(a1, -a1, 2*b, name="oppo") & \
-        B.expectation_formula(a3, o, - 1e-6, name="oppo").always(0, 3) & \
-        B.expectation_formula(-a3, o, - 1e-6, name="oppo").always(0, 3) 
+    mu_overtake = B.expectation_formula(a2, o, lanes['slow'] - 0.01, sys_id) & \
+        B.expectation_formula(-a2, o, - lanes['slow'] - 0.011, sys_id) & \
+        B.expectation_formula(a1, -a1, 2*b, sys_id) & \
+        B.expectation_formula(a3, o, - 1e-6, sys_id).always(0, 3) & \
+        B.expectation_formula(-a3, o, - 1e-6, sys_id).always(0, 3) 
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = mu_belief.always(0, N)
@@ -52,7 +48,7 @@ def gen_pce_specs(q, N, eta):
 
     phi = (phi_neg_belief | phi_overtake) & phi_safe
 
-    return B, phi, B.expectation_formula(o, -a4, -v_lim, name="oppo").always(0, N)
+    return phi
 
 
 def visualize(x, byc):

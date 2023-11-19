@@ -1,74 +1,58 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from libs.pce_basis import PCEBasis
+from stlpy.STL import LinearPredicate
 import math
 
 
 l = 8 # The lane width
 
-def oppo_specs(q, N, eta, sys_id):
+# Coefficients of the predicates
+o = np.zeros((4, ))
+a1 = np.array([1, 0, 0, 0])
+a2 = np.array([0, 1, 0, 0])
+a3 = np.array([0, 0, 1, 0])
+a4 = np.array([0, 0, 0, 1])
 
-    B = PCEBasis(eta, q)        # Initialize the PCE instance
 
-    eps = 0.05          # Probability threshold
-    v_lim = 30          # Velocity limit
 
-    # Coefficients of the predicates
-    o = np.zeros((4, ))
+def target_specs(B, N, sys_id):
 
-    a1 = np.array([1, 0, 0, 0])
-    a2 = np.array([0, 1, 0, 0])
-    a3 = np.array([0, 0, 1, 0])
-    a4 = np.array([0, 0, 0, 1])
-    
-    mu_safe = B.probability_formula(a1, -a1, 4, eps, name=sys_id) | \
-        B.probability_formula(-a1, a1, 4, eps, name=sys_id) | \
-        B.probability_formula(a2, -a2, 4, eps, name=sys_id) | \
-        B.probability_formula(-a2, a2, 4, eps, name=sys_id)
-    
-    reach = B.expectation_formula(a1, o, l/2 - 1e-2, name=sys_id).always(0, 3) & \
-        B.expectation_formula(-a1, o, -l/2 - 1e-2, name=sys_id).always(0, 3) & \
-        B.expectation_formula(a3, o, math.pi-1e-6, name=sys_id).always(0, 3) & \
-        B.expectation_formula(-a3, o, -math.pi-1e-6, name=sys_id).always(0, 3)
+    def c(coef):
+        n = len(coef)
+        L = B.L
+        return np.append(coef, np.zeros((n * L,)))
 
-    bet_out = B.expectation_formula(a2, o, -l/2 - 1e-2, name=sys_id) & \
-        B.expectation_formula(-a2, o, l/2 - 1e-2, name=sys_id)
-    vel_out = B.expectation_formula(a1, o, -1.2*l, name=sys_id)
+    reach = LinearPredicate(c(a1), l/2 - 1e-2, name=sys_id).always(0, 3) & \
+        LinearPredicate(c(-a1), -l/2 - 1e-2, name=sys_id).always(0, 3) & \
+        LinearPredicate(c(a3), math.pi-1e-6, name=sys_id).always(0, 3) & \
+        LinearPredicate(c(-a3), -math.pi-1e-6, name=sys_id).always(0, 3)
+
+    bet_out = LinearPredicate(c(a2), -l/2 - 1e-2, name=sys_id) & \
+        LinearPredicate(c(-a2), l/2 - 1e-2, name=sys_id)
+    vel_out = LinearPredicate(c(a1), -1.2*l, name=sys_id)
+    # vel_out = B.expectation_formula(a1, o, -1.2*l, name=sys_id)
     keep_out = vel_out | bet_out
 
-    bet_in = B.expectation_formula(a1, o, l/2 - 1e-2, name=sys_id) & \
-        B.expectation_formula(-a1, o, -l/2 - 1e-2, name=sys_id)
-    vel_in = B.expectation_formula(-a2, o, -1.2*l, name=sys_id)
+    bet_in = LinearPredicate(c(a1), l/2 - 1e-2, name=sys_id) & \
+        LinearPredicate(c(-a1), -l/2 - 1e-2, name=sys_id)
+    vel_in = LinearPredicate(c(-a2), -1.2*l, name=sys_id)
     keep_in = vel_in | bet_in
 
-    phi = reach.eventually(0, N-3) & keep_out.always(0, N) & keep_in.always(0, N) & mu_safe.always(0, N)
+    phi = reach.eventually(0, N-3) & keep_out.always(0, N) & keep_in.always(0, N)
 
-    return B, phi
+    return phi
 
-
-def pedes_specs(q, N, eta, sys_id):
-
-    B = PCEBasis(eta, q)        # Initialize the PCE instance
-
-    eps = 0.05          # Probability threshold
-    v_lim = 30          # Velocity limit
-
-    # Coefficients of the predicates
-    o = np.zeros((4, ))
-
-    a1 = np.array([1, 0, 0, 0])
-    a2 = np.array([0, 1, 0, 0])
-    a3 = np.array([0, 0, 1, 0])
-    a4 = np.array([0, 0, 0, 1])
+def safety_specs(B, N, sys_id, dist=2, eps=0.1):
     
-    mu_safe = B.probability_formula(a1, -a1, 2, eps, name=sys_id) | \
-        B.probability_formula(-a1, a1, 2, eps, name=sys_id) | \
-        B.probability_formula(a2, -a2, 2, eps, name=sys_id) | \
-        B.probability_formula(-a2, a2, 2, eps, name=sys_id)
-
+    mu_safe = B.probability_formula(a1, -a1, dist, eps, name=sys_id) | \
+        B.probability_formula(-a1, a1, dist, eps, name=sys_id) | \
+        B.probability_formula(a2, -a2, dist, eps, name=sys_id) | \
+        B.probability_formula(-a2, a2, dist, eps, name=sys_id)
+    
     phi = mu_safe.always(0, N)
 
-    return B, phi
+    return phi
 
 
 def model_checking(x, z, spec, k):
@@ -92,6 +76,8 @@ def visualize(x, oppos):
     
     N = x.shape[1]-1
 
+    cursor = 22
+
     gray = (102/255, 102/255, 102/255)
     light_gray = (230/255, 230/255, 230/255)
     # Draw the environment
@@ -113,7 +99,7 @@ def visualize(x, oppos):
 
     # Plot the trajectory of the ego vehicle (EV)
     tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
-    p1, = plt.plot(x[0, 22], x[1, 22], alpha=0.8, color='red', marker="D", markersize=8)
+    p1, = plt.plot(x[0, cursor], x[1, cursor], alpha=0.8, color='red', marker="D", markersize=8)
 
     M = 64
 
@@ -132,7 +118,7 @@ def visualize(x, oppos):
         for i in range(M):
             tr2, = plt.plot(mc_oppo[i, 0, :], mc_oppo[i, 1, :], color=sys.color)
             # ax.add_patch(Rectangle(xy=(mc_oppo[i, -1, 0]-4, mc_oppo[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-            p2, = plt.plot(mc_oppo[i, 0, 22], mc_oppo[i, 1, 22], alpha=0.8, color=sys.color, marker="D", markersize=8)
+            p2, = plt.plot(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor], alpha=0.8, color=sys.color, marker="D", markersize=8)
             p2, = plt.plot(mc_oppo[i, 0, 0], mc_oppo[i, 1, 0], alpha=0.8, color=sys.color, marker="*", markersize=18)
 
     plt.rcParams['pdf.fonttype'] = 42

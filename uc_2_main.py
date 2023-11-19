@@ -2,9 +2,10 @@ import numpy as np
 from libs.micp_pce_solver import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
 from stlpy.systems.linear import DoubleIntegrator
-from config.uc_2_config import visualize, oppo_specs, pedes_specs
+from config.uc_2_config import visualize, target_specs, safety_specs
 from config.uc_2_config import l as lane
 import math
+from libs.pce_basis import PCEBasis
 
 import chaospy as cp
 
@@ -19,40 +20,48 @@ np.random.seed(7)
 
 # The assumed control mode of the obstacle vehicle (OV)
 
-gamma_o = np.linspace(0, 0, N)
-a_o = np.linspace(0, -0.8, N)
-ou = np.array([gamma_o, a_o])
+gamma1 = np.linspace(0, 0, N)
+a1 = np.linspace(0, -1, N)
+u1 = np.array([gamma1, a1])
 
-gamma_h = np.linspace(0, 0, N)
-a_h = np.linspace(0, 0.4, N)
-hu = np.array([gamma_h, a_h])
+gamma2 = np.linspace(0, 0, N)
+a2 = np.linspace(0, 0.5, N)
+u2 = np.array([gamma2, a2])
 
 # Generate the PCE instance and the specification
+bias1 = cp.Normal(0, 1e-2)
+length1 = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
+intent1 = cp.DiscreteUniform(-1, 1)
+eta1 = cp.J(bias1, length1, intent1) # Generate the random variable instance
+B1 = PCEBasis(eta1, q)
 
-bias_o = cp.Normal(0, 1e-2)
-length_o = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
-intent_o = cp.DiscreteUniform(-1, 1)
-eta_o = cp.J(bias_o, length_o, intent_o) # Generate the random variable instance
-Bo, phi_o = oppo_specs(q, N, eta_o, "oppo")
-
-bias_p = cp.Normal(0, 0.01)
-length_p = cp.Uniform(lower=0.5-1e-3, upper=0.5+1e-3)
+bias2 = cp.Normal(0, 0.01)
+length2 = cp.Uniform(lower=0.5-1e-3, upper=0.5+1e-3)
 # intent_p = cp.Binomial(1, 0.3)
-intent_p = cp.DiscreteUniform(0, 1)
-eta_p = cp.J(bias_p, length_p, intent_p) # Generate the random variable instance
-Bp, phi_p = pedes_specs(q, N, eta_p, "pedes")
+intent2 = cp.DiscreteUniform(0, 1)
+eta2 = cp.J(bias2, length2, intent2) # Generate the random variable instance
+B2 = PCEBasis(eta2, q)
 
-x0 = np.array([-lane*2, -lane/2, 0, 0.5])            # Initial position of the ego vehicle (EV)
-z0 = np.array([8*lane, lane/2, math.pi, 6])           # Initial position of the obstacle vehicle (OV)
-h0 = np.array([1.2*lane, 1.2*lane, math.pi, 0])
+phi_oppo = safety_specs(B1, N, "oppo")
+phi_pedes = safety_specs(B2, N, "pedes")
+phi_ego = target_specs(B1, N, "ego")
 
-ego = BicycleModel(x0, [0, l, 1], Ts, name="ego", color='red')                  # Dynamic model of the ego vehicle (EV)
-oppo = BicycleModel(z0, [0, l, 1], Ts, useq=ou, basis=Bo, pce=True, name="oppo", color=(0, 0, 0.5))     # Dynamic model of the obstacle vehicle (OV)
-pedes = BicycleModel(h0, [0, l, 1], Ts, useq=hu, basis=Bp, pce=True, name="pedes", color=(1, 0.6, 0.2))
+e0 = np.array([-lane*2, -lane/2, 0, 0.5])            # Initial position of the ego vehicle (EV)
+o0 = np.array([84, lane/2, math.pi, 8])           # Initial position of the obstacle vehicle (OV)
+p0 = np.array([1.2*lane, 1.2*lane, math.pi, 0])
 
-phi = phi_o & phi_p
+ego = BicycleModel(e0, [0, l, 1], Ts, name="ego", color='red')                  # Dynamic model of the ego vehicle (EV)
+oppo = BicycleModel(o0, [0, l, 1], Ts, useq=u1, basis=B1, pce=True, name="oppo", color=(0, 0, 0.5))     # Dynamic model of the obstacle vehicle (OV)
+pedes = BicycleModel(p0, [0, l, 1], Ts, useq=u2, basis=B2, pce=True, name="pedes", color=(1, 0.6, 0.2))
+
+phi = phi_ego & phi_oppo & phi_pedes
 # Initialize the solver
-solver = PCEMICPSolver(phi, ego, [oppo, pedes], N, robustness_cost=True)
+
+sys = {ego.name: ego,
+       oppo.name: oppo,
+       pedes.name: pedes}
+
+solver = PCEMICPSolver(phi, sys, N, robustness_cost=True)
 
 # Adding input constraints (not necessary if input is in the cost function)
 # u_min = np.array([[-0.5, -50]]).T
@@ -61,16 +70,15 @@ solver = PCEMICPSolver(phi, ego, [oppo, pedes], N, robustness_cost=True)
 
 # Adding input to the cost function
 Q = np.zeros([ego.n, ego.n])
-R = np.array([[1, 0], [0, 500]])
+R = np.array([[10, 0], [0, 500]])
 solver.AddQuadraticCost(Q, R)
 
 
 # Solve the problem
 x, u, _, _ = solver.Solve()
 
-z = solver.predict[solver.index["oppo"]]
-
+oz = solver.predict["oppo"]
+pz = solver.predict["pedes"]
 # model_checking(x, z, phi, 0)
 
-# visualize(x, z0, ou, Bo, Bp, oppo, pedes)
 visualize(x, [oppo, pedes])
