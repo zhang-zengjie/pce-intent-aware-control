@@ -54,7 +54,7 @@ ego = BicycleModel(e0, [0, l, 1], Ts, name="ego", color='red')                  
 oppo = BicycleModel(o0, [0, l, 1], Ts, useq=u1, basis=B1, pce=True, name="oppo", color=(0, 0, 0.5))     # Dynamic model of the obstacle vehicle (OV)
 pedes = BicycleModel(p0, [0, l, 1], Ts, useq=u2, basis=B2, pce=True, name="pedes", color=(1, 0.6, 0.2))
 
-phi = phi_ego & phi_oppo & phi_pedes
+phi = phi_ego #& phi_oppo & phi_pedes
 # Initialize the solver
 
 sys = {ego.name: ego,

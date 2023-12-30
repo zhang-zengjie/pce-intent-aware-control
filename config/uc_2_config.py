@@ -90,7 +90,7 @@ def visualize(x, oppos):
 
     N = x.shape[1]-1
 
-    cursor = 25
+    cursor = 24
 
     gray = (102/255, 102/255, 102/255)
     light_gray = (230/255, 230/255, 230/255)
@@ -115,7 +115,7 @@ def visualize(x, oppos):
     tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
     p1, = plt.plot(x[0, cursor], x[1, cursor], alpha=0.8, color='red', marker="D", markersize=5)
 
-    ax.add_patch(Rectangle(xy=(x[0, cursor], x[1, cursor]+1), angle=x[2, cursor]*90/np.pi+180, width=veh_len, height=veh_width, linewidth=1, color='red', fill=True))
+    ax.add_patch(Rectangle(xy=(x[0, cursor], x[1, cursor]+1), angle=x[2, cursor]*90/np.pi+180, width=veh_len, height=veh_width, linewidth=1, edgecolor='red', facecolor='white', zorder=10))
 
     for sys in oppos:
         # Sample parameters from distribution eta
@@ -132,7 +132,11 @@ def visualize(x, oppos):
         for i in range(M):
             # tr2, = plt.plot(mc_oppo[i, 0, :], mc_oppo[i, 1, :], color=sys.color)
             # ax.add_patch(Rectangle(xy=(mc_oppo[i, -1, 0]-4, mc_oppo[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-            p2, = plt.plot(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor], alpha=0.8, color=sys.color, marker="D", markersize=5)
+
+            if sys.name == "oppo":
+                ax.add_patch(Rectangle(xy=(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor]-1) ,width=4, height=2, linewidth=1, edgecolor='blue', facecolor='white', fill=False, zorder=10))
+            else:
+                p2, = plt.plot(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor], alpha=0.8, color=sys.color, marker="D", markersize=5)
             # p2, = plt.plot(mc_oppo[i, 0, 0], mc_oppo[i, 1, 0], alpha=0.8, color=sys.color, marker="*", markersize=10)
 
         print("p")
