@@ -36,7 +36,7 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, delta_t, useq=None, basis=None, pce=False, name=None, color=None):
+    def __init__(self, x0, param, delta_t, IG=1, IO=0, useq=None, basis=None, pce=False, name=None, color=None):
 
         self.n = 4
         self.m = 2
@@ -47,6 +47,9 @@ class BicycleModel(NonlinearSystem):
         self.basis = basis
         self.delta_t = delta_t
         self.color = color
+
+        self.intent_gain = IG
+        self.intent_offset = IO
 
         # Param list: bias (delta), length (l), intent (iota)
         self.fn = [
@@ -68,7 +71,7 @@ class BicycleModel(NonlinearSystem):
         delta, l, intent = self.param
 
         xx, yy, theta, v = x[0], x[1], x[2], x[3]
-        gamma, a = intent * u
+        gamma, a = (intent + self.intent_offset) * u * self.intent_gain
         xx += delta_t * v * math.cos(theta + gamma)
         yy += delta_t * v * math.sin(theta + gamma)
         theta += delta_t * v * math.sin(gamma)/l

@@ -2,7 +2,7 @@ import numpy as np
 from libs.micp_pce_solver import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
 from stlpy.systems.linear import DoubleIntegrator
-from config.uc_2_config import visualize, target_specs, safety_specs
+from config.uc_2_config import visualize3D, visualize, target_specs, safety_specs
 from config.uc_2_config import l as lane
 import math
 from libs.pce_basis import PCEBasis
@@ -12,7 +12,7 @@ import chaospy as cp
 # The assumed control input of the obstacle vehicle (OV)
 
 Ts = 0.5    # The baseline value of sampling time delta_t
-l = 4             # The baseline value of the vehicle length
+l = 4             # The baseline value of the vehicle lengthS
 q = 2                       # The polynomial order
 N = 30                      # The control horizon
 
@@ -21,7 +21,7 @@ np.random.seed(7)
 # The assumed control mode of the obstacle vehicle (OV)
 
 gamma1 = np.linspace(0, 0, N)
-a1 = np.linspace(0, -1, N)
+a1 = np.linspace(0, -1.2, N)
 u1 = np.array([gamma1, a1])
 
 gamma2 = np.linspace(0, 0, N)
@@ -47,7 +47,7 @@ phi_pedes = safety_specs(B2, N, "pedes")
 phi_ego = target_specs(B1, N, "ego")
 
 e0 = np.array([-lane*2, -lane/2, 0, 0.5])            # Initial position of the ego vehicle (EV)
-o0 = np.array([84, lane/2, math.pi, 8])           # Initial position of the obstacle vehicle (OV)
+o0 = np.array([86, lane/2, math.pi, 8])           # Initial position of the obstacle vehicle (OV)
 p0 = np.array([1.2*lane, 1.2*lane, math.pi, 0])
 
 ego = BicycleModel(e0, [0, l, 1], Ts, name="ego", color='red')                  # Dynamic model of the ego vehicle (EV)
@@ -60,6 +60,7 @@ phi = phi_ego & phi_oppo & phi_pedes
 sys = {ego.name: ego,
        oppo.name: oppo,
        pedes.name: pedes}
+
 
 solver = PCEMICPSolver(phi, sys, N, robustness_cost=True)
 
@@ -81,4 +82,8 @@ oz = solver.predict["oppo"]
 pz = solver.predict["pedes"]
 # model_checking(x, z, phi, 0)
 
+# np.save('x.npy', x)
+
+# x = np.load('x.npy')
+# visualize3D(x, [oppo, pedes])
 visualize(x, [oppo, pedes])
