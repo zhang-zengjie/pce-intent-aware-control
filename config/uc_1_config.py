@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-lanes = {'right': 0,
-         'slow': 2,
-         'middle': 4,
-         'fast': 6,
-         'left': 8}
+lanes = {'right': 1,
+         'slow': 3,
+         'middle': 5,
+         'fast': 7,
+         'left': 9}
 
 eps = 0.05          # Probability threshold
 v_lim = 30          # Velocity limit
@@ -51,7 +51,7 @@ def gen_pce_specs(B, N, sys_id):
     return phi
 
 
-def visualize(x, byc, t_end):
+def visualize(x, byc, x_range, y_range, t_end):
 
     from matplotlib.patches import Rectangle
 
@@ -59,7 +59,7 @@ def visualize(x, byc, t_end):
     N = 30
     H = 600
 
-    fig, ax = plt.subplots(figsize=(10,1))
+    fig, ax = plt.subplots(figsize=(7,1))
 
     plt.plot(lanes['left'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
     plt.plot(lanes['middle'] * np.ones((H, )), linestyle='dashed', linewidth=1, color='black')
@@ -80,7 +80,7 @@ def visualize(x, byc, t_end):
     for j in range(0, t_end):
         # tr1, = plt.plot(x[0, :t_end], x[1, :t_end], linestyle='solid', linewidth=2, color='red')
         # p1, = plt.plot(x[0, j-1], x[1, j-1], alpha=0.8, color='red', marker="D", markersize=8)
-        ax.add_patch(Rectangle(xy=(x[0, j]-4, x[1, j]-1), width=4, height=2, linewidth=1, edgecolor='red', fill=True, facecolor=(255/255, 153/255, 153/255), zorder=10))
+        ax.add_patch(Rectangle(xy=(x[0, j]-4, x[1, j]-0.5), width=4, height=1, angle=x[2, j]/3.14*180, linewidth=1, edgecolor='red', fill=True, facecolor=(255/255, 1-j/(t_end*2-2), 1-j/(t_end*2-2)), zorder=10))
 
     # Plot the trajectories of the obstacle vehicle (OV) 
     for j in range(0, t_end):
@@ -88,9 +88,10 @@ def visualize(x, byc, t_end):
             # tr2, = plt.plot(mc[i, 0, :t_end], mc[i, 1, :t_end], color=(0, 0, 0.5))
             # ax.add_patch(Rectangle(xy=(mc[i, -1, 0]-4, mc[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
             # p2, = plt.plot(mc[i, 0, j-1]-4, mc[i, 1, j-1], alpha=0.8, color=(0, 0, 0.5), marker="D", markersize=8)
-            ax.add_patch(Rectangle(xy=(mc[i, 0, j]-4, mc[i, 1, j]-1), width=4, height=2, linewidth=1, edgecolor='blue', fill=True, facecolor=(153/255, 204/255, 255/255), zorder=H-mc[i, 0, t_end-1]))
+            ax.add_patch(Rectangle(xy=(mc[i, 0, j]-4, mc[i, 1, j]-0.5), width=4, height=1, angle=x[2, j]/3.14*180, linewidth=1, edgecolor='blue', fill=True, facecolor=(1-j/(t_end*2-2), 1-j/(t_end*4-4), 255/255), zorder=j*(H-mc[i, 0, t_end-1])))
 
-    plt.xlim([0, H])
+    plt.xlim(x_range)
+    plt.ylim(y_range)
     plt.xlabel('x')
     plt.ylabel('y')
     # plt.legend([tr1, p1, tr2, p2], ['ego trajectory', 'ego position', 'obstacle trajectory', 'obstacle position'], loc='upper right', fontsize="10", ncol=2)
