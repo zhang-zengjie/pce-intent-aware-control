@@ -56,7 +56,7 @@ sys = {ego.name: ego,
 
 if True:
 
-    solver = PCEMICPSolver(phi, sys, N, robustness_cost=False)
+    solver = PCEMICPSolver(phi, sys, N, robustness_cost=True)
 
     # Adding input constraints (not necessary if input is in the cost function)
     # u_min = np.array([[-0.5, -50]]).T
@@ -79,5 +79,5 @@ if True:
 else:
     x = np.load('x_slow_down.npy')
     
-visualize(x, oppo, t_end=29)
+visualize(x, oppo, x_range=[0, 500], y_range=[0, 10], t_end=29)
     # visualize(x, oppo, x_range=[0, 600], y_range=[-1, 9], t_end=29)

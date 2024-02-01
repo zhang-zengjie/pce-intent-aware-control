@@ -97,7 +97,7 @@ class PCEMICPSolver(STLSolver):
         self.AddDynamicsConstraints()
         
         self.AddSTLConstraints()
-        self.AddRobustnessConstraint()
+        # self.AddRobustnessConstraint()
 
         if robustness_cost:
             self.AddRobustnessCost()
