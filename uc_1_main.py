@@ -7,7 +7,7 @@ from libs.pce_basis import PCEBasis
 import chaospy as cp
 
 # The assumed control input of the obstacle vehicle (OV)
-ASSUMED_INPUT = "switch_lane"
+ASSUMED_INPUT = "slow_down"
 Ts = 0.5    # The discrete sampling time Delta_t
 l = 4       # The baseline value of the vehicle length
 q = 2       # The polynomial order
@@ -54,23 +54,30 @@ oppo = BicycleModel(o0, [0, l, 1], Ts, useq=v, basis=B, pce=True, name="oppo")  
 sys = {ego.name: ego,
        oppo.name: oppo}
 
-solver = PCEMICPSolver(phi, sys, N, robustness_cost=False)
+if True:
 
-# Adding input constraints (not necessary if input is in the cost function)
-# u_min = np.array([[-0.5, -50]]).T
-# u_max = np.array([[0.5, 50]]).T
-# solver.AddControlBounds(u_min, u_max)
+    solver = PCEMICPSolver(phi, sys, N, robustness_cost=False)
 
-# Adding input to the cost function
-Q = np.zeros([ego.n, ego.n])
-R = np.array([[1e4, 0], [0, 1e-4]])
-ref = np.array([0, lanes['fast'], 0, 0])
-solver.AddQuadraticCost(Q, R, ref)
+    # Adding input constraints (not necessary if input is in the cost function)
+    # u_min = np.array([[-0.5, -50]]).T
+    # u_max = np.array([[0.5, 50]]).T
+    # solver.AddControlBounds(u_min, u_max)
 
-# Solve the problem
-x, u, _, _ = solver.Solve()
+    # Adding input to the cost function
+    Q = np.zeros([ego.n, ego.n])
+    R = np.array([[1e4, 0], [0, 1e-4]])
+    ref = np.array([0, lanes['fast'], 0, 0])
+    solver.AddQuadraticCost(Q, R, ref)
 
-z = solver.predict["oppo"]
-# print(model_checking(x, z, phs, 0))
+    # Solve the problem
+    x, u, _, _ = solver.Solve()
 
-visualize(x, oppo)
+    z = solver.predict["oppo"]
+    # print(model_checking(x, z, phs, 0))
+    np.save('x_slow_down.npy', x)
+
+else:
+    x = np.load('x_slow_down.npy')
+    
+visualize(x, oppo, t_end=29)
+    # visualize(x, oppo, x_range=[0, 600], y_range=[-1, 9], t_end=29)

@@ -51,7 +51,7 @@ def gen_pce_specs(B, N, sys_id):
     return phi
 
 
-def visualize(x, byc):
+def visualize(x, byc, t_end):
 
     from matplotlib.patches import Rectangle
 
@@ -59,7 +59,7 @@ def visualize(x, byc):
     N = 30
     H = 600
 
-    plt.figure(figsize=(5,2))
+    fig, ax = plt.subplots(figsize=(10,1))
 
     plt.plot(lanes['left'] * np.ones((H, )), linestyle='solid', linewidth=2, color='black')
     plt.plot(lanes['middle'] * np.ones((H, )), linestyle='dashed', linewidth=1, color='black')
@@ -77,14 +77,18 @@ def visualize(x, byc):
         mc[i] = byc.predict_linear(N)
 
     # Plot the trajectory of the ego vehicle (EV)
-    tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
-    p1, = plt.plot(x[0, -1], x[1, -1], alpha=0.8, color='red', marker="D", markersize=8)
+    for j in range(0, t_end):
+        # tr1, = plt.plot(x[0, :t_end], x[1, :t_end], linestyle='solid', linewidth=2, color='red')
+        # p1, = plt.plot(x[0, j-1], x[1, j-1], alpha=0.8, color='red', marker="D", markersize=8)
+        ax.add_patch(Rectangle(xy=(x[0, j]-4, x[1, j]-1), width=4, height=2, linewidth=1, edgecolor='red', fill=True, facecolor=(255/255, 153/255, 153/255), zorder=10))
 
     # Plot the trajectories of the obstacle vehicle (OV) 
-    for i in range(M):
-        tr2, = plt.plot(mc[i, 0, :], mc[i, 1, :], color=(0, 0, 0.5))
-        # ax.add_patch(Rectangle(xy=(mc[i, -1, 0]-4, mc[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-        p2, = plt.plot(mc[i, 0, -1]-4, mc[i, 1, -1], alpha=0.8, color=(0, 0, 0.5), marker="D", markersize=8)
+    for j in range(0, t_end):
+        for i in range(M):
+            # tr2, = plt.plot(mc[i, 0, :t_end], mc[i, 1, :t_end], color=(0, 0, 0.5))
+            # ax.add_patch(Rectangle(xy=(mc[i, -1, 0]-4, mc[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
+            # p2, = plt.plot(mc[i, 0, j-1]-4, mc[i, 1, j-1], alpha=0.8, color=(0, 0, 0.5), marker="D", markersize=8)
+            ax.add_patch(Rectangle(xy=(mc[i, 0, j]-4, mc[i, 1, j]-1), width=4, height=2, linewidth=1, edgecolor='blue', fill=True, facecolor=(153/255, 204/255, 255/255), zorder=H-mc[i, 0, t_end-1]))
 
     plt.xlim([0, H])
     plt.xlabel('x')
