@@ -35,11 +35,11 @@ def gen_pce_specs(B, N, sys_id):
         B.expectation_formula(o, a2, lanes['middle'], sys_id) | \
         B.expectation_formula(o, a4, v_lim, sys_id)
 
-    mu_overtake = B.expectation_formula(a2, o, lanes['slow'] - 0.01, sys_id) & \
-        B.expectation_formula(-a2, o, - lanes['slow'] - 0.011, sys_id) & \
+    mu_overtake = B.expectation_formula(a2, o, lanes['slow'] - 0.1, sys_id) & \
+        B.expectation_formula(-a2, o, - lanes['slow'] - 0.1, sys_id) & \
         B.expectation_formula(a1, -a1, 2*b, sys_id) & \
-        B.expectation_formula(a3, o, - 1e-6, sys_id).always(0, 3) & \
-        B.expectation_formula(-a3, o, - 1e-6, sys_id).always(0, 3) 
+        B.expectation_formula(a3, o, - 1e-1, sys_id).always(0, 3) & \
+        B.expectation_formula(-a3, o, - 1e-1, sys_id).always(0, 3) 
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = mu_belief.always(0, N)
@@ -55,8 +55,7 @@ def visualize(x, byc, x_range, y_range, t_end):
 
     from matplotlib.patches import Rectangle
 
-    N = x.shape[1]-1
-    N = 30
+    N = t_end
     H = 600
 
     fig, ax = plt.subplots(figsize=(7,1))
@@ -73,8 +72,10 @@ def visualize(x, byc, x_range, y_range, t_end):
     mc = np.zeros([M, 4, N + 1])
     for i in range(M):
         # byc.update_initial(z0)
-        byc.update_parameter([nodes[0, i], nodes[1, i], 1])
-        mc[i] = byc.predict_linear(N)
+        byc.param = np.array([nodes[0, i], nodes[1, i], 1])
+        byc.update_lin_matrices()
+        # 
+        mc[i] = byc.predict_lin(N)
 
     # Plot the trajectory of the ego vehicle (EV)
     for j in range(0, t_end):

@@ -59,11 +59,7 @@ class PCEMICPSolver(STLSolver):
                  robustness_cost=True, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
         
-        self.predict = {}
-        for name, sys in syses.items():
-            if name != "ego":
-                self.predict[name] = sys.predict_pce(T)
-        
+        self.syses = syses
         ego = syses["ego"]
         sys = LinearAffineSystem(ego.Al, ego.Bl, ego.Cl, ego.Dl, ego.El)
         super().__init__(spec, sys, ego.x0, T, verbose)
@@ -87,11 +83,23 @@ class PCEMICPSolver(STLSolver):
             print("Setting up optimization problem...")
             st = time.time()  # for computing setup time
 
+        self.predict = {}
+        for name, sys in self.syses.items():
+            if name != "ego":
+                self.predict[name] = sys.predict_pce(self.T - 1)
+        '''
+                if step == 0:
+                    self.history[name] = sys.predict_pce(0)
+                else:
+                    self.history[name] = np.stack((self.history[name], sys.predict_pce(0)))
+                assert self.history[name].shape[0] == step + 1
+        '''
+
         # Create optimization variables
 
         self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
-        self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
+        self.rho = self.model.addMVar(1, name="rho", lb=-np.inf)  # lb sets minimum robustness
 
         # Add cost and constraints to the optimization problem
         self.AddDynamicsConstraints()
@@ -101,9 +109,10 @@ class PCEMICPSolver(STLSolver):
 
         if robustness_cost:
             self.AddRobustnessCost()
-
+        self.AddQuadraticCost()
         if self.verbose:
             print(f"Setup complete in {time.time() - st} seconds.")
+
 
     def AddControlBounds(self, u_min, u_max):
         for t in range(self.T):
@@ -115,10 +124,11 @@ class PCEMICPSolver(STLSolver):
             self.model.addConstr(x_min <= self.x[:, t])
             self.model.addConstr(self.x[:, t] <= x_max)
 
-    def AddQuadraticCost(self, Q, R, x_ref=np.array([0, 0, 0, 0])):
-        self.cost += (self.x[:, 0] - x_ref) @ Q @ (self.x[:, 0] - x_ref) + self.u[:, 0] @ R @ self.u[:, 0]
+    def AddQuadraticCost(self):
+        R = np.array([[1e4, 0], [0, 1e-4]])
+        self.cost += self.u[:, 0] @ R @ self.u[:, 0]
         for t in range(1, self.T):
-            self.cost += (self.x[:, t] - x_ref) @ Q @ (self.x[:, t] - x_ref) + self.u[:, t] @ R @ self.u[:, t]
+            self.cost += self.u[:, t] @ R @ self.u[:, t]
 
         print(type(self.cost))
 
