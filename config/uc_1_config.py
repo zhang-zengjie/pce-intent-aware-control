@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 
 lanes = {'right': 1,
@@ -8,15 +9,15 @@ lanes = {'right': 1,
          'fast': 7,
          'left': 9}
 
+mode_list = ['switch_lane', 'constant_speed', 'speed_up']
+
 x_range_dict = {'switch_lane': [-5, 165],
-           'constant_speed': [25, 185],
-           'speed_up': [-5, 165],
-           'big_variance': [-5, 165]}
+                'constant_speed': [25, 185],
+                'speed_up': [-5, 165]}
 
 legend_loc_dict = {'switch_lane': (0.74, 0.15),
-              'constant_speed': (0.74, 0.65),
-              'speed_up': (0.74, 0.65),
-              'big_variance': (0.74, 0.65)}
+                    'constant_speed': (0.74, 0.65),
+                    'speed_up': (0.74, 0.65)}
 
 eps = 0.05          # Probability threshold
 d_safe_x = 10
@@ -30,14 +31,40 @@ a2 = np.array([0, 1, 0, 0])
 a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
+
+def select_intension(N, mode=1):
+
+    if mode_list[mode] == 'switch_lane':  # That the OV is trying to switch to the fast lane
+        gamma = np.array([0.005 * math.sin(i*6.28/(N-1)) for i in range(N)])
+        a = np.zeros([N, ])
+        v = np.array([gamma, a])
+
+    elif mode_list[mode] == 'constant_speed':  # That the OV is trying to slow down (intention aware)
+        gamma = np.linspace(0, 0, N)
+        a = np.linspace(0, 0, N)
+        v = np.array([gamma, a])
+
+    elif mode_list[mode] == 'speed_up':   # That the OV is trying to speed_up (adversarial action)
+        gamma = np.linspace(0, 0, N)
+        a = np.linspace(0, 2, N)
+        v = np.array([gamma, a])
+
+    else:
+        print('Mode number invalid. Abort...')
+        exit()
+
+    return v
+
+
 def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
 
-    mu_safe = B.probability_formula(a2, o, lanes['right'] + d_safe_y/2, eps, sys_id) | \
-        B.probability_formula(-a2, o, - lanes['left'] - d_safe_y/2, eps, sys_id) | \
-        B.probability_formula(a1, -a1, d_safe_x, eps, sys_id) | \
+    mu_safe_1 = B.probability_formula(a1, -a1, d_safe_x, eps, sys_id) | \
         B.probability_formula(-a1, a1, d_safe_x, eps, sys_id) | \
         B.probability_formula(a2, -a2, d_safe_y, eps, sys_id) | \
         B.probability_formula(-a2, a2, d_safe_y, eps, sys_id)
+
+    mu_safe_2 = B.probability_formula(a2, o, lanes['right'] + d_safe_y/2, eps, sys_id) | \
+        B.probability_formula(-a2, o, - lanes['left'] - d_safe_y/2, eps, sys_id)
 
     mu_belief = B.variance_formula(a1, var_lim, sys_id) & \
         B.expectation_formula(o, -a2, -lanes['middle'], sys_id) & \
@@ -46,11 +73,13 @@ def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
         B.expectation_formula(o, a2, lanes['middle'], sys_id) | \
         B.expectation_formula(o, a4, v_lim, sys_id)
 
-    mu_overtake = B.probability_formula(a2, o, lanes['slow'] - 0.1, eps, sys_id).always(0, 3) & \
-        B.probability_formula(-a2, o, - lanes['slow'] - 0.1, eps, sys_id).always(0, 3) & \
-        B.probability_formula(a1, -a1, d_safe_y, eps, sys_id).always(0, 3) & \
+    mu_overtake = B.probability_formula(a2, o, lanes['slow'] - 0.1, eps, sys_id) & \
+        B.probability_formula(-a2, o, - lanes['slow'] - 0.1, eps, sys_id) & \
+        B.probability_formula(a1, -a1, d_safe_x, eps, sys_id) & \
         B.probability_formula(a3, o, - 1e-1, eps, sys_id).always(0, 3) & \
         B.probability_formula(-a3, o, - 1e-1, eps, sys_id).always(0, 3) 
+
+    mu_safe = mu_safe_1 & mu_safe_2
 
     phi_safe = mu_safe.always(0, N)
     phi_belief = mu_belief.always(0, N)
@@ -64,9 +93,9 @@ def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
 
 def visualize(x, z, T, mode):
 
-    x_range=x_range_dict[mode]
+    x_range=x_range_dict[mode_list[mode]]
     y_range=[0, 10]
-    legend_loc=legend_loc_dict[mode]
+    legend_loc=legend_loc_dict[mode_list[mode]]
 
     from matplotlib.patches import Rectangle
 

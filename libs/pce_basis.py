@@ -99,8 +99,6 @@ class PCEBasis:
         coef = np.array([math.sqrt((1 - eps) * (self.L-1) * abs(cp.E(self.basis[k] ** 2, self.eta)) / eps) for k in range(1, self.L)])
         # coef = np.sqrt([(self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta)) for k in range(1, self.L)])
 
-        
-
         for i in range(1, self.L):
             pre_mat = np.zeros((self.L + 1, a.shape[0]))
             pre_mat[0] = a
