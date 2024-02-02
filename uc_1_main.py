@@ -82,4 +82,4 @@ else:
     xx = np.load('x_' + str(mode) + '_c.npy')
     zz = np.load('z_' + str(mode) + '_c.npy')
 
-visualize(xx[:, :, 0], zz[:, :, 0], N-3, mode)
+visualize(xx[:, :N-3, :], zz[:, :N-3, :], mode)

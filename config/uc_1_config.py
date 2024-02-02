@@ -91,7 +91,10 @@ def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
     return phi
 
 
-def visualize(x, z, T, mode):
+def visualize(x, z, mode):
+
+    T = x.shape[1]
+    M = x.shape[2]
 
     x_range=x_range_dict[mode_list[mode]]
     y_range=[0, 10]
@@ -108,11 +111,12 @@ def visualize(x, z, T, mode):
     plt.plot(np.arange(x_range[0], x_range[1]), lanes['right'] * np.ones((x_range[1] - x_range[0], )), linestyle='solid', linewidth=2, color='black')
 
     # Plot the trajectory of the ego vehicle (EV)
-    for j in range(0, T):
-        pev = ax.add_patch(Rectangle(xy=(x[0, j]-4, x[1, j]-0.5), width=4, height=1, angle=x[2, j]/3.14*180, linewidth=1, 
-                               edgecolor='red', fill=True, facecolor=(255/255, 1-j/(T*2-2), 1-j/(T*2-2)), zorder=10))
-        pov = ax.add_patch(Rectangle(xy=(z[0, j]-4, z[1, j]-0.5), width=4, height=1, angle=z[2, j]/3.14*180, linewidth=1, 
-                               edgecolor='blue', fill=True, facecolor=(1-j/(T*2-2), 1-j/(T*4-4), 255/255), zorder=10))
+    for j in range(0, M):
+        for i in range(0, T):
+            pev = ax.add_patch(Rectangle(xy=(x[0, i, j]-4, x[1, i, j]-0.5), width=4, height=1, angle=x[2, i, j]/3.14*180, linewidth=1, 
+                                edgecolor='red', fill=True, facecolor=(255/255, 1-i/(T*2-2), 1-i/(T*2-2)), zorder=10+M*T+i*M+x[1, i, j]))
+            pov = ax.add_patch(Rectangle(xy=(z[0, i, j]-4, z[1, i, j]-0.5), width=4, height=1, angle=z[2, i, j]/3.14*180, linewidth=1, 
+                                edgecolor='blue', fill=True, facecolor=(1-i/(T*2-2), 1-i/(T*4-4), 255/255), zorder=10+i*M+z[1, i, j]))
 
     plt.xlim(x_range)
     plt.ylim(y_range)
