@@ -61,10 +61,7 @@ class BicycleModel(NonlinearSystem):
         ]
 
         self.x0 = x0
-        self.update_lin_matrices()
-
-        if self.PCE:
-            self.update_pce_matrices()
+        self.update_matrices()
 
 
     def f(self, x, u):
@@ -103,6 +100,13 @@ class BicycleModel(NonlinearSystem):
 
         self.useq = useq
     '''
+
+    def update_matrices(self):
+        self.update_lin_matrices()
+
+        if self.PCE:
+            self.update_pce_matrices()
+
     def update_lin_matrices(self):
 
         A, B, E = get_linear_matrix(self.x0, self.delta_t)
