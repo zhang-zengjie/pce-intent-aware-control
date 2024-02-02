@@ -47,6 +47,8 @@ class BicycleModel(NonlinearSystem):
         self.basis = basis
         self.delta_t = delta_t
         self.color = color
+        self.param = param
+        self.PCE = pce
 
         self.intent_gain = IG
         self.intent_offset = IO
@@ -58,11 +60,11 @@ class BicycleModel(NonlinearSystem):
             lambda z: z[2]              # iota for B0
         ]
 
-        self.update_initial(x0)
-        self.update_parameter(param)
+        self.x0 = x0
+        self.update_lin_matrices()
 
-        if pce:
-            self.update_pce_parameter()
+        if self.PCE:
+            self.update_pce_matrices()
 
 
     def f(self, x, u):
@@ -93,17 +95,15 @@ class BicycleModel(NonlinearSystem):
         e1 = f0(self.param)
 
         return (a0, a1), (b0, b1), (e0, e1)
-    
+    '''
     def update_initial(self, x0):
         self.x0 = x0
 
     def update_control(self, useq):
 
         self.useq = useq
-
-    def update_parameter(self, param):
-
-        self.param = param
+    '''
+    def update_lin_matrices(self):
 
         A, B, E = get_linear_matrix(self.x0, self.delta_t)
         a, b, e = self.get_linear_scalar()
@@ -115,7 +115,7 @@ class BicycleModel(NonlinearSystem):
         self.El = sum([e[i] * E[i] for i in [0, 1]])
 
 
-    def update_pce_parameter(self):
+    def update_pce_matrices(self):
 
         A, B, E = get_linear_matrix(self.x0, self.delta_t)
 
@@ -155,7 +155,7 @@ class BicycleModel(NonlinearSystem):
 
         return states
 
-    def predict_linear(self, N):
+    def predict_lin(self, N):
         
         assert self.useq.shape[1] >= N
 
@@ -169,19 +169,20 @@ class BicycleModel(NonlinearSystem):
     def predict_pce(self, N):
 
         assert self.useq.shape[1] >= N
-
+        assert N >= 0
         states = np.zeros([self.basis.L, self.n, N + 1])
 
         # Initial condition
         states[0, :, 0] = self.x0
         # Dynamics
         
-        for t in range(N):
-            for s in range(self.basis.L):
-                states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
-                for r in range(self.n):
-                    if math.isnan(states[s, r, t + 1]): 
-                        states[s, r, t + 1] = 0
+        if N > 0:
+            for t in range(N):
+                for s in range(self.basis.L):
+                    states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
+                    for r in range(self.n):
+                        if math.isnan(states[s, r, t + 1]): 
+                            states[s, r, t + 1] = 0
         return states
 
 

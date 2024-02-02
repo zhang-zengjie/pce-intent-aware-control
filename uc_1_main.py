@@ -8,10 +8,10 @@ import chaospy as cp
 
 # The assumed control input of the obstacle vehicle (OV)
 ASSUMED_INPUT = "slow_down"
-Ts = 0.5    # The discrete sampling time Delta_t
+Ts = 1    # The discrete sampling time Delta_t
 l = 4       # The baseline value of the vehicle length
 q = 2       # The polynomial order
-N = 30      # The control horizon
+N = 15      # The control horizon
 
 np.random.seed(7)
 
@@ -45,7 +45,6 @@ e0 = np.array([0, lanes['fast'], 0, 25])            # Initial position of the eg
 o0 = np.array([50, lanes['slow'], 0, 25])           # Initial position of the obstacle vehicle (OV)
 
 # Generate the PCE instance and the specification
-phi = gen_pce_specs(B, N, "oppo")
 
 ego = BicycleModel(e0, [0, l, 1], Ts, name="ego")                  # Dynamic model of the ego vehicle (EV)
 oppo = BicycleModel(o0, [0, l, 1], Ts, useq=v, basis=B, pce=True, name="oppo")     # Dynamic model of the obstacle vehicle (OV)
@@ -56,28 +55,30 @@ sys = {ego.name: ego,
 
 if True:
 
-    solver = PCEMICPSolver(phi, sys, N, robustness_cost=True)
+    xx = np.zeros([ego.n, N])
+    zz = np.zeros([oppo.n, N])
+    xx[:, 0] = ego.x0
+    zz[:, 0] = oppo.x0
 
-    # Adding input constraints (not necessary if input is in the cost function)
-    # u_min = np.array([[-0.5, -50]]).T
-    # u_max = np.array([[0.5, 50]]).T
-    # solver.AddControlBounds(u_min, u_max)
+    for i in range(0, N-3):
+        
+        ego.x0 = xx[:, i]
+        oppo.x0 = zz[:, i]
 
-    # Adding input to the cost function
-    Q = np.zeros([ego.n, ego.n])
-    R = np.array([[1e4, 0], [0, 1e-4]])
-    ref = np.array([0, lanes['fast'], 0, 0])
-    solver.AddQuadraticCost(Q, R, ref)
+        phi = gen_pce_specs(B, N-i, "oppo")
+        solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
+        x, u, _, _ = solver.Solve()
+        
+        xx[:, i + 1] = ego.f(xx[:, i], u[:, 0])
+        zz[:, i + 1] = oppo.f(zz[:, i], v[:, i])
 
-    # Solve the problem
-    x, u, _, _ = solver.Solve()
-
-    z = solver.predict["oppo"]
+    
     # print(model_checking(x, z, phs, 0))
-    np.save('x_slow_down.npy', x)
+    np.save('x_slow_down_c.npy', xx)
 
 else:
-    x = np.load('x_slow_down.npy')
+    xx = np.load('x_slow_down_c.npy')
     
-visualize(x, oppo, x_range=[0, 500], y_range=[0, 10], t_end=29)
+oppo.x0 = o0
+visualize(xx, oppo, x_range=[0, 500], y_range=[0, 10], t_end=N-1)
     # visualize(x, oppo, x_range=[0, 600], y_range=[-1, 9], t_end=29)
