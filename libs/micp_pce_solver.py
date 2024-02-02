@@ -99,7 +99,7 @@ class PCEMICPSolver(STLSolver):
 
         self.x = self.model.addMVar((self.sys.n, self.T), lb=-float('inf'), name='x')
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
-        self.rho = self.model.addMVar(1, name="rho", lb=-np.inf)  # lb sets minimum robustness
+        self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
         # Add cost and constraints to the optimization problem
         self.AddDynamicsConstraints()
@@ -125,7 +125,7 @@ class PCEMICPSolver(STLSolver):
             self.model.addConstr(self.x[:, t] <= x_max)
 
     def AddQuadraticCost(self):
-        R = np.array([[1e4, 0], [0, 1e-4]])
+        R = np.array([[1e4, 0], [0, 1e-2]])
         self.cost += self.u[:, 0] @ R @ self.u[:, 0]
         for t in range(1, self.T):
             self.cost += self.u[:, t] @ R @ self.u[:, t]
