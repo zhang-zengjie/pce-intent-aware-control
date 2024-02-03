@@ -46,7 +46,7 @@ UPDATE_END = N-3
 
 np.random.seed(7)
 
-if False:
+if True:
     
     xx = np.zeros([ego.n, N + 1, M])
     zz = np.zeros([oppo.n, N + 1, M])
@@ -68,6 +68,8 @@ if False:
             if i < UPDATE_END:
                 phi = gen_pce_specs(B, N-i, v0*1.2, 12, 'oppo')
                 solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
+                R = np.array([[1e4, 0], [0, 1e-4]])
+                solver.AddQuadraticControlCost(R)
                 x, u, rho, _ = solver.Solve()
                 if rho >= 0:
                     u_opt = u[:, 0]
@@ -75,8 +77,8 @@ if False:
             xx[:, i + 1, j] = ego.f(xx[:, i, j], u_opt)
             zz[:, i + 1, j] = oppo.f(zz[:, i, j], v[:, i])
 
-        np.save('x_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx[:, :, j])
-        np.save('z_' + str(mode) + '_seed_' + str(j) + '_c.npy', zz[:, :, j])
+        np.save('results/case_1/x_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx[:, :, j])
+        np.save('results/case_1/z_' + str(mode) + '_seed_' + str(j) + '_c.npy', zz[:, :, j])
 
 else:
 
@@ -84,7 +86,7 @@ else:
     zz = np.zeros([oppo.n, N + 1, M])
 
     for j in range(0, M):
-        xx[:, :, j] = np.load('x_' + str(mode) + '_seed_' + str(j) + '_c.npy')
-        zz[:, :, j] = np.load('z_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+        xx[:, :, j] = np.load('results/case_1/x_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+        zz[:, :, j] = np.load('results/case_1/z_' + str(mode) + '_seed_' + str(j) + '_c.npy')
 
     visualize(xx[:, :N-3, :], zz[:, :N-3, :], mode)
