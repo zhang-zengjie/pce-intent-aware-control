@@ -87,15 +87,15 @@ if RECAL:
         xx_oppo[:, i + 1, j] = oppo.f(xx_oppo[:, i, j], v1[:, i])
         xx_pedes[:, i + 1, j] = pedes.f(xx_pedes[:, i, j], v2[:, i])
         
-    np.save('results/case_2/xx_ego' + str(mode) + '_seed_' + str(j) + '_c.npy', xx_ego[:, :, j])
-    np.save('results/case_2/xx_oppo' + str(mode) + '_seed_' + str(j) + '_c.npy', xx_oppo[:, :, j])
-    np.save('results/case_2/xx_pedes' + str(mode) + '_seed_' + str(j) + '_c.npy', xx_pedes[:, :, j])
+    np.save('results/case_2/xx_ego_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx_ego[:, :, j])
+    np.save('results/case_2/xx_oppo_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx_oppo[:, :, j])
+    np.save('results/case_2/xx_pedes_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx_pedes[:, :, j])
     
 else:
 
-    xx_ego[:, :, j] = np.load('results/case_2/xx_ego' + str(mode) + '_seed_' + str(j) + '_c.npy')
-    xx_oppo[:, :, j] = np.load('results/case_2/xx_oppo' + str(mode) + '_seed_' + str(j) + '_c.npy')
-    xx_pedes[:, :, j] = np.load('results/case_2/xx_pedes' + str(mode) + '_seed_' + str(j) + '_c.npy')
+    xx_ego[:, :, j] = np.load('results/case_2/xx_ego_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+    xx_oppo[:, :, j] = np.load('results/case_2/xx_oppo_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+    xx_pedes[:, :, j] = np.load('results/case_2/xx_pedes_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy')
 
 oppo.x0 = o0
 pedes.x0 = p0

@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from libs.pce_basis import PCEBasis
+import chaospy as cp
 
 
 lanes = {'right': 1,
@@ -32,29 +34,39 @@ a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
 
-def select_intension(N, mode=1):
+def get_intension(N, mode=1):
 
     if mode_list[mode] == 'switch_lane':  # That the OV is trying to switch to the fast lane
         gamma = np.array([0.005 * math.sin(i*6.28/(N-1)) for i in range(N)])
         a = np.zeros([N, ])
-        v = np.array([gamma, a])
 
     elif mode_list[mode] == 'constant_speed':  # That the OV is trying to slow down (intention aware)
         gamma = np.linspace(0, 0, N)
         a = np.linspace(0, 0, N)
-        v = np.array([gamma, a])
 
     elif mode_list[mode] == 'speed_up':   # That the OV is trying to speed_up (adversarial action)
         gamma = np.linspace(0, 0, N)
         a = np.linspace(0, 2, N)
-        v = np.array([gamma, a])
-
+        
     else:
         print('Mode number invalid. Abort...')
         exit()
 
+    v = np.array([gamma, a])
     return v
 
+
+def gen_bases(l):
+
+    sigma = 0.1
+    q = 2       # The polynomial order
+    bias = cp.Trunc(cp.Normal(0, sigma), lower=-sigma, upper=sigma)
+    length = cp.Uniform(lower=l - 1e-2, upper=l + 1e-2)
+    intent = cp.Normal(1, 1e-3)
+    eta = cp.J(bias, length, intent) # Generate the random variable instance
+    B = PCEBasis(eta, q)
+
+    return B
 
 def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
 
@@ -81,13 +93,13 @@ def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
 
     mu_safe = mu_safe_1 & mu_safe_2
 
-    phi_safe = mu_safe.always(0, N)
-    phi_belief = mu_belief.always(0, N)
-    phi_neg_belief = neg_mu_belief.eventually(0, N)
-    phi_overtake = mu_overtake.eventually(0, N-3)
-
-    phi = (phi_neg_belief | phi_overtake) & phi_safe
-
+    if N > 3:
+        phi_belief = mu_belief.always(0, N)
+        phi_neg_belief = neg_mu_belief.eventually(0, N)
+        phi_overtake = mu_overtake.eventually(0, N-3)
+        phi = (phi_neg_belief | phi_overtake) & mu_safe.always(0, N)
+    else:
+        phi = mu_safe.always(0, N)
     return phi
 
 
