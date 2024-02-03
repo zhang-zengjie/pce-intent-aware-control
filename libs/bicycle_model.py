@@ -36,7 +36,7 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, x0, param, delta_t, IG=1, IO=0, pce=False, useq=None, basis=None, name=None, color=None):
+    def __init__(self, delta_t, IG=1, IO=0, pce=False, useq=None, basis=None, name=None, color=None):
 
         self.n = 4
         self.m = 2
@@ -46,7 +46,7 @@ class BicycleModel(NonlinearSystem):
 
         self.delta_t = delta_t
         self.color = color
-        self.param = param
+        self.param = None
         self.PCE = pce
 
         if self.PCE:
@@ -62,8 +62,7 @@ class BicycleModel(NonlinearSystem):
             lambda z: z[2]              # iota for B0
         ]
 
-        self.x0 = x0
-        self.update_matrices()
+        self.x0 = None
 
 
     def f(self, x, u):
