@@ -1,5 +1,5 @@
 import numpy as np
-from libs.micp_pce_solver import PCEMICPSolver
+from libs.micp_pce_solvern import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
 from config.uc_1_config import gen_pce_specs, lanes, visualize, select_intension
 from libs.commons import model_checking
@@ -15,6 +15,7 @@ N = 15      # The control horizon
 M = 10
 v0 = 10
 sigma = 0.1
+R = np.array([[1e4, 0], [0, 1e-4]])
 
 mode = 2    # Select intention mode: 
             # 0 for switching-lane OV 
@@ -68,7 +69,6 @@ if True:
             if i < UPDATE_END:
                 phi = gen_pce_specs(B, N-i, v0*1.2, 12, 'oppo')
                 solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
-                R = np.array([[1e4, 0], [0, 1e-4]])
                 solver.AddQuadraticCost(R)
                 x, u, rho, _ = solver.Solve()
                 if rho >= 0:
