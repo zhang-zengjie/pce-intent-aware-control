@@ -126,8 +126,10 @@ def visualize(x, oppos):
         mc_oppo = np.zeros([M, 4, N + 1])
         for i in range(M):
             # oppo.update_initial(z0)
-            sys.update_parameter(nodes_o[:, i])
-            mc_oppo[i] = sys.predict_linear(N)
+            sys.param = nodes_o[:, i]
+            sys.update_lin_matrices()
+            sys.update_pce_matrices()
+            mc_oppo[i] = sys.predict_lin(N)
 
         for i in range(M):
             # tr2, = plt.plot(mc_oppo[i, 0, :], mc_oppo[i, 1, :], color=sys.color)
