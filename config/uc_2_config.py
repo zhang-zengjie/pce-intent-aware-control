@@ -6,17 +6,19 @@ import math
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import itertools
 from matplotlib.patches import Rectangle
+from libs.pce_basis import PCEBasis
+import chaospy as cp
 
 
 l = 8 # The lane width
-
+q = 2                       # The polynomial order
 veh_width = 1.8
 veh_len = 3.6
 
 gray = (102/255, 102/255, 102/255)
 light_gray = (230/255, 230/255, 230/255)
 
-x_lim = [-30*l, 30*l]
+x_lim = [-3*l, 3*l]
 y_lim = [-3*l, 3*l]
 z_lim = [-3*l, 3*l]
 
@@ -28,6 +30,42 @@ a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
 M = 64
+
+def get_intentions(T):
+
+    gamma1 = np.linspace(0, 0, T)
+    a1 = np.linspace(0, -1.2, T)
+    u1 = np.array([gamma1, a1])
+
+    gamma2 = np.linspace(0, 0, T)
+    a2 = np.linspace(0, 0.5, T)
+    u2 = np.array([gamma2, a2])
+
+    return u1, u2
+
+
+def gen_bases(mode):
+    
+    if mode == 2:
+        bias1 = cp.Normal(0, math.sqrt(2/3))
+        intent1 = cp.Normal(0, 1e-3)
+        bias2 = cp.Normal(0, 0.5)
+        intent2 = cp.Normal(0.5, 1e-3)
+    else:
+        bias1 = cp.Normal(0, 1e-2)
+        intent1 = cp.DiscreteUniform(-1, 1)
+        bias2 = cp.Normal(0, 0.01)
+        intent2 = cp.DiscreteUniform(0, 1)
+
+    length1 = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
+    eta1 = cp.J(bias1, length1, intent1) # Generate the random variable instance
+    B1 = PCEBasis(eta1, q)
+
+    length2 = cp.Uniform(lower=0.5-1e-3, upper=0.5+1e-3)
+    eta2 = cp.J(bias2, length2, intent2) # Generate the random variable instance
+    B2 = PCEBasis(eta2, q)
+
+    return B1, B2
 
 def turn_specs(B, N, sys_id):
 
@@ -79,7 +117,7 @@ def model_checking(x, z, spec, k):
 
 def visualize(x, oppos, cursor):
 
-    fig = plt.figure(figsize=(30, 3))
+    fig = plt.figure(figsize=(3, 3))
     ax = plt.axes()
 
     N = x.shape[1]-1
@@ -142,91 +180,3 @@ def visualize(x, oppos, cursor):
     fig.tight_layout()
 
     plt.show()
-
-def visualize3D(x, oppos):
-
-    fig = plt.figure(figsize=(3, 3))
-
-    ax = plt.axes(projection='3d')
-    
-    N = x.shape[1]-1
-    x[2, :] = 0.5 * x[2, :]
-
-    plotBG3D(ax, z_lim[0])
-    plotEnv3D(ax, x, oppos, N, 0, z_lim[0], 10)
-
-    plotBG3D(ax, z_lim[1])
-    plotEnv3D(ax, x, oppos, N, -1, z_lim[1], 10)
-   
-    ax.axes.set_xlim(x_lim[0], x_lim[1])
-    ax.axes.set_ylim(x_lim[0], x_lim[1])
-    fig.tight_layout()
-
-    plt.show()
-
-
-def plotEnv3D(ax, x, oppos, N, cursor, height, layer):
-
-    for i in [-1, 1]:
-
-        for r in np.arange(-0.9, 1, 0.1):
-            ax.plot([r*l, r*l], [1.1*i*l, 1.4*i*l], height, color=gray, linewidth=2, zorder=layer)
-            ax.plot([1.1*i*l, 1.4*i*l], [r*l, r*l], height, color=gray, linewidth=2, zorder=layer)
-
-        ax.plot([0, 0], [1.5*i*l, 3*i*l], height, color='black', linewidth=1, zorder=layer)
-        ax.plot([1.5*i*l, 3*i*l], [0, 0], height, color='black', linewidth=1, zorder=layer)
-
-        for j in [-1, 1]:
-            ax.plot([i*l, i*l], [j*l, 3*j*l], height, color='black', linewidth=2, zorder=layer)
-            ax.plot([j*l, 3*j*l], [i*l, i*l], height, color='black', linewidth=2, zorder=layer)
-
-            ax.plot([0.5*i*l, 0.5*i*l], [1.5*j*l, 3*j*l], height, color=light_gray, linewidth=1, linestyle='dotted', zorder=layer)
-            ax.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], height, color=light_gray, linewidth=1, linestyle='dotted', zorder=layer)
-
-    # Plot the trajectory of the ego vehicle (EV)
-
-    # ax.add_patch(Rectangle(xy=(mc_oppo[i, -1, 0]-4, mc_oppo[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-
-    # tr1, = ax.plot(x[0, :], x[1, :], height, linestyle='solid', linewidth=2, color='red', zorder=layer)
-    # p1, = ax.plot(x[0, cursor], x[1, cursor], height, alpha=0.8, color='red', marker="D", markersize=5, zorder=layer)
-
-    plotVeh3D(ax, x[0, cursor], x[1, cursor], height, x[2, cursor], color='red', zorder=10)
-
-
-    for sys in oppos:
-        # Sample parameters from distribution eta
-        nodes_o = sys.basis.eta.sample([M, ])
-
-        # Generate the sampled trajectories of the obstacle vehicle (OV) 
-        
-        mc_oppo = np.zeros([M, 4, N + 1])
-        for i in range(M):
-            # oppo.update_initial(z0)
-            sys.update_parameter(nodes_o[:, i])
-            mc_oppo[i] = sys.predict_linear(N)
-
-        for i in range(M):
-            tr2, = ax.plot(mc_oppo[i, 0, :], mc_oppo[i, 1, :], height, color=sys.color, zorder=layer)
-            # ax.add_patch(Rectangle(xy=(mc_oppo[i, -1, 0]-4, mc_oppo[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-            p2, = ax.plot(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor], height, alpha=0.8, color=sys.color, marker="D", markersize=5, zorder=layer)
-            # p2, = plt.plot(mc_oppo[i, 0, 0], mc_oppo[i, 1, 0], alpha=0.8, color=sys.color, marker="*", markersize=10)
-
-            # ax.add_patch(Rectangle(xy=(mc_oppo[i, -1, 0]-4, mc_oppo[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
-
-
-def plotVeh3D(ax, x, y, z, theta, color, zorder=10):
-
-    verts_front = np.array([
-        [x + veh_width * math.sin(theta)/ 2, y - veh_width * math.cos(theta) / 2, z],
-        [x - veh_width * math.sin(theta)/ 2, y + veh_width * math.cos(theta) / 2, z]
-    ])
-    bias = np.array([veh_len * math.cos(theta), veh_len * math.sin(theta), 0])
-    verts = np.array([verts_front[0], verts_front[1], verts_front[1] - bias, verts_front[0] - bias])
-
-    ax.add_collection3d(Poly3DCollection([verts], color=color, zorder=zorder))
-
-def plotBG3D(ax, z_coord):
-
-    verts = [list(item) for item in itertools.product(x_lim, y_lim, [z_coord])]
-    verts_rt = [verts[0], verts[1], verts[3], verts[2]]
-    ax.add_collection3d(Poly3DCollection([verts_rt], color='white', zorder=0))
