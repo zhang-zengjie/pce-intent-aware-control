@@ -12,7 +12,7 @@ Ts = 1    # The discrete sampling time Delta_t
 l = 4       # The baseline value of the vehicle length
 q = 2       # The polynomial order
 N = 15      # The control horizon
-M = 1
+M = 10
 v0 = 10
 sigma = 0.1
 
@@ -46,8 +46,8 @@ UPDATE_END = N-3
 
 np.random.seed(7)
 
-if True:
-
+if False:
+    
     xx = np.zeros([ego.n, N + 1, M])
     zz = np.zeros([oppo.n, N + 1, M])
     nodes = oppo.basis.eta.sample([N, M])
@@ -75,11 +75,16 @@ if True:
             xx[:, i + 1, j] = ego.f(xx[:, i, j], u_opt)
             zz[:, i + 1, j] = oppo.f(zz[:, i, j], v[:, i])
 
-    np.save('x_' + str(mode) + '_c.npy', xx)
-    np.save('z_' + str(mode) + '_c.npy', zz)
+        np.save('x_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx[:, :, j])
+        np.save('z_' + str(mode) + '_seed_' + str(j) + '_c.npy', zz[:, :, j])
 
 else:
-    xx = np.load('x_' + str(mode) + '_c.npy')
-    zz = np.load('z_' + str(mode) + '_c.npy')
 
-visualize(xx[:, :N-3, :], zz[:, :N-3, :], mode)
+    xx = np.zeros([ego.n, N + 1, M])
+    zz = np.zeros([oppo.n, N + 1, M])
+
+    for j in range(0, M):
+        xx[:, :, j] = np.load('x_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+        zz[:, :, j] = np.load('z_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+
+    visualize(xx[:, :N-3, :], zz[:, :N-3, :], mode)
