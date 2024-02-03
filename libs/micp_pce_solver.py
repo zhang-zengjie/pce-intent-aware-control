@@ -109,7 +109,7 @@ class PCEMICPSolver(STLSolver):
 
         if robustness_cost:
             self.AddRobustnessCost()
-        self.AddQuadraticCost()
+        
         if self.verbose:
             print(f"Setup complete in {time.time() - st} seconds.")
 
@@ -124,8 +124,7 @@ class PCEMICPSolver(STLSolver):
             self.model.addConstr(x_min <= self.x[:, t])
             self.model.addConstr(self.x[:, t] <= x_max)
 
-    def AddQuadraticCost(self):
-        R = np.array([[1e4, 0], [0, 1e-4]])
+    def AddQuadraticControlCost(self, R):
         self.cost += self.u[:, 0] @ R @ self.u[:, 0]
         for t in range(1, self.T):
             self.cost += self.u[:, t] @ R @ self.u[:, t]

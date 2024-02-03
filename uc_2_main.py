@@ -63,16 +63,8 @@ sys = {ego.name: ego,
 
 
 solver = PCEMICPSolver(phi, sys, N, robustness_cost=True)
-
-# Adding input constraints (not necessary if input is in the cost function)
-# u_min = np.array([[-0.5, -50]]).T
-# u_max = np.array([[0.5, 50]]).T
-# solver.AddControlBounds(u_min, u_max)
-
-# Adding input to the cost function
-Q = np.zeros([ego.n, ego.n])
 R = np.array([[10, 0], [0, 500]])
-solver.AddQuadraticCost(Q, R)
+solver.AddQuadraticControlCost(R)
 
 
 # Solve the problem
