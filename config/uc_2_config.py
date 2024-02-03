@@ -16,7 +16,7 @@ veh_len = 3.6
 gray = (102/255, 102/255, 102/255)
 light_gray = (230/255, 230/255, 230/255)
 
-x_lim = [-3*l, 3*l]
+x_lim = [-30*l, 30*l]
 y_lim = [-3*l, 3*l]
 z_lim = [-3*l, 3*l]
 
@@ -29,31 +29,25 @@ a4 = np.array([0, 0, 0, 1])
 
 M = 64
 
-def target_specs(B, N, sys_id):
+def turn_specs(B, N, sys_id):
 
-    def c(coef):
-        n = len(coef)
-        L = B.L
-        return np.append(coef, np.zeros((n * L,)))
+    reach = B.expectation_formula(a1, o, l/2 - 0.1, name=sys_id) & \
+        B.expectation_formula(-a1, o, -l/2 - 0.1, name=sys_id) & \
+        B.expectation_formula(a2, o, 3/2*l, name=sys_id)
 
-    reach = LinearPredicate(c(a1), l/2 - 1e-2, name=sys_id).always(0, 3) & \
-        LinearPredicate(c(-a1), -l/2 - 1e-2, name=sys_id).always(0, 3) & \
-        LinearPredicate(c(a3), math.pi-1e-6, name=sys_id).always(0, 3) & \
-        LinearPredicate(c(-a3), -math.pi-1e-6, name=sys_id).always(0, 3) #& \
-        #LinearPredicate(c(a2), 3/2*l, name=sys_id)
+    drive_in = B.expectation_formula(a1, o, l/2 - 0.5, name=sys_id) & \
+        B.expectation_formula(-a1, o, -l/2 - 0.5, name=sys_id)
 
-    bet_out = LinearPredicate(c(a2), -l/2 - 1e-2, name=sys_id) & \
-        LinearPredicate(c(-a2), l/2 - 1e-2, name=sys_id)
-    vel_out = LinearPredicate(c(a1), -1.2*l, name=sys_id)
-    # vel_out = B.expectation_formula(a1, o, -1.2*l, name=sys_id)
-    keep_out = vel_out | bet_out
+    bet_out = B.expectation_formula(a2, o, -l/2 - 0.1, name=sys_id) & \
+        B.expectation_formula(-a2, o, l/2 - 0.1, name=sys_id)
+    vel_out = B.expectation_formula(a1, o, -1.2*l, name=sys_id)
+    
+    drive_out = vel_out | bet_out
 
-    bet_in = LinearPredicate(c(a1), l/2 - 1e-2, name=sys_id) & \
-        LinearPredicate(c(-a1), -l/2 - 1e-2, name=sys_id)
-    vel_in = LinearPredicate(c(-a2), -1.2*l, name=sys_id)
-    keep_in = vel_in | bet_in
-
-    phi = reach.eventually(0, N-3) & keep_out.always(0, N) & keep_in.always(0, N)
+    if N > 3:
+        phi = reach.always(0, 3).eventually(0, N-3) & drive_out.always(0, N) 
+    else:
+        phi = drive_in.always(0, N)
 
     return phi
 
@@ -83,14 +77,12 @@ def model_checking(x, z, spec, k):
     return rho
 
 
-def visualize(x, oppos):
+def visualize(x, oppos, cursor):
 
-    fig = plt.figure(figsize=(3, 3))
+    fig = plt.figure(figsize=(30, 3))
     ax = plt.axes()
 
     N = x.shape[1]-1
-
-    cursor = 24
 
     gray = (102/255, 102/255, 102/255)
     light_gray = (230/255, 230/255, 230/255)
@@ -115,7 +107,7 @@ def visualize(x, oppos):
     tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
     p1, = plt.plot(x[0, cursor], x[1, cursor], alpha=0.8, color='red', marker="D", markersize=5)
 
-    ax.add_patch(Rectangle(xy=(x[0, cursor], x[1, cursor]+1), angle=x[2, cursor]*90/np.pi+180, width=veh_len, height=veh_width, linewidth=1, edgecolor='red', facecolor='white', zorder=10))
+    ax.add_patch(Rectangle(xy=(x[0, cursor], x[1, cursor]+1), angle=x[2, cursor]*180/np.pi+180, width=veh_len, height=veh_width, linewidth=1, edgecolor='red', facecolor='white', zorder=10))
 
     for sys in oppos:
         # Sample parameters from distribution eta
