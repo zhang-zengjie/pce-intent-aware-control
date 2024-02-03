@@ -69,7 +69,7 @@ if True:
                 phi = gen_pce_specs(B, N-i, v0*1.2, 12, 'oppo')
                 solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
                 R = np.array([[1e4, 0], [0, 1e-4]])
-                solver.AddQuadraticControlCost(R)
+                solver.AddQuadraticCost(R)
                 x, u, rho, _ = solver.Solve()
                 if rho >= 0:
                     u_opt = u[:, 0]

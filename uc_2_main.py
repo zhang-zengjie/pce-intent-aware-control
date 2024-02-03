@@ -64,7 +64,7 @@ sys = {ego.name: ego,
 
 solver = PCEMICPSolver(phi, sys, N, robustness_cost=True)
 R = np.array([[10, 0], [0, 500]])
-solver.AddQuadraticControlCost(R)
+solver.AddQuadraticCost(R)
 
 
 # Solve the problem
