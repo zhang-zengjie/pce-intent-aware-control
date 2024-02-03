@@ -16,7 +16,7 @@ M = 10
 v0 = 10
 sigma = 0.1
 
-mode = 0    # Select intention mode: 
+mode = 2    # Select intention mode: 
             # 0 for switching-lane OV 
             # 1 for constant-speed OV
             # 2 for speeding-up OV
