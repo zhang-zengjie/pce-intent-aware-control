@@ -5,8 +5,6 @@ from config.uc_1_config import gen_pce_specs, lanes, visualize, get_intension, g
 from libs.commons import model_checking
 
 
-RECAL = False
-
 Ts = 1    # The discrete sampling time Delta_t
 l = 4       # The baseline value of the vehicle length
 N = 15      # The control horizon
@@ -36,12 +34,10 @@ oppo = BicycleModel(Ts, useq=v, basis=B, pce=True, name='oppo')     # Dynamic mo
 sys = {ego.name: ego,
        oppo.name: oppo}
 
-UPDATE_END = N-3
-
 xx = np.zeros([ego.n, N + 1, M])
 zz = np.zeros([oppo.n, N + 1, M])
 
-if RECAL:
+if False:
     
     nodes = oppo.basis.eta.sample([N, M])
 
