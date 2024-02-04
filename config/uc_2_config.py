@@ -5,7 +5,7 @@ from stlpy.STL import LinearPredicate
 import math
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import itertools
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Rectangle, Circle
 from libs.pce_basis import PCEBasis
 import chaospy as cp
 
@@ -18,7 +18,7 @@ veh_len = 3.6
 gray = (102/255, 102/255, 102/255)
 light_gray = (230/255, 230/255, 230/255)
 
-x_lim = [-3*l, 3*l]
+x_lim = [-30*l, 30*l]
 y_lim = [-3*l, 3*l]
 z_lim = [-3*l, 3*l]
 
@@ -115,12 +115,12 @@ def model_checking(x, z, spec, k):
     return rho
 
 
-def visualize(x, oppos, cursor):
+def visualize(sys, tr, draw_real_oppo_traj=True):
 
-    fig = plt.figure(figsize=(3, 3))
+    fig = plt.figure(figsize=(30, 3))
     ax = plt.axes()
-
-    N = x.shape[1]-1
+    T = tr['ego'].shape[1]
+    cursor = 24
 
     gray = (102/255, 102/255, 102/255)
     light_gray = (230/255, 230/255, 230/255)
@@ -142,36 +142,63 @@ def visualize(x, oppos, cursor):
             plt.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], color=light_gray, linewidth=1, linestyle='dotted')
 
     # Plot the trajectory of the ego vehicle (EV)
-    tr1, = plt.plot(x[0, :], x[1, :], linestyle='solid', linewidth=2, color='red')
-    p1, = plt.plot(x[0, cursor], x[1, cursor], alpha=0.8, color='red', marker="D", markersize=5)
+    tr1, = plt.plot(tr['ego'][0, :], tr['ego'][1, :], linestyle='solid', linewidth=2, color='red')
 
-    ax.add_patch(Rectangle(xy=(x[0, cursor], x[1, cursor]+1), angle=x[2, cursor]*180/np.pi+180, width=veh_len, height=veh_width, linewidth=1, edgecolor='red', facecolor='white', zorder=10))
+    def tf_anchor(x, y, theta):
+        xr = x - math.cos(theta) * veh_len + math.sin(theta) * veh_width/2
+        yr = y - math.sin(theta) * veh_len - math.cos(theta) * veh_width/2
+        return (xr, yr)
 
-    for sys in oppos:
-        # Sample parameters from distribution eta
-        nodes_o = sys.basis.eta.sample([M, ])
+    c_ego = plt.get_cmap('Reds')
+    for i in range(0, T):
+        ax.add_patch(Rectangle(xy=tf_anchor(*tr['ego'][:3, i]), angle=tr['ego'][2, i]*180/np.pi, 
+                               width=veh_len, height=veh_width, linewidth=1, fill=True,
+                               edgecolor=sys['ego'].color, facecolor=c_ego(i/T), zorder=10))
+        
+    c_oppo = plt.get_cmap('Blues')
+    c_pedes = plt.get_cmap('YlOrBr')
+    if draw_real_oppo_traj:
+
+        for i in range(0, T):
+
+            ax.add_patch(Rectangle(xy=tf_anchor(*tr['oppo'][:3, i]), angle=tr['oppo'][2, i]*180/np.pi, 
+                            width=veh_len, height=veh_width, linewidth=1, fill=True,
+                            edgecolor=sys['oppo'].color, facecolor=c_oppo((i/T)**4), zorder=10))
+            ax.add_patch(Circle(xy=tuple(tr['pedes'][:2, i]), radius=0.5, linewidth=1, fill=True,
+                            edgecolor=sys['pedes'].color, facecolor=c_pedes((i/T)**4), zorder=10))
+
+    else:    
+
+        nodes = sys.basis.eta.sample([M, len(sys)])
 
         # Generate the sampled trajectories of the obstacle vehicle (OV) 
         
-        mc_oppo = np.zeros([M, 4, N + 1])
-        for i in range(M):
-            # oppo.update_initial(z0)
-            sys.param = nodes_o[:, i]
-            sys.update_lin_matrices()
-            sys.update_pce_matrices()
-            mc_oppo[i] = sys.predict_lin(N)
+        mc_oppo = np.zeros([M, 4, T])
+        mc_pedes = np.zeros([M, 4, T])
 
-        for i in range(M):
-            # tr2, = plt.plot(mc_oppo[i, 0, :], mc_oppo[i, 1, :], color=sys.color)
-            # ax.add_patch(Rectangle(xy=(mc_oppo[i, -1, 0]-4, mc_oppo[i, -1, 1]-1) ,width=4, height=2, linewidth=1, color='blue', fill=False))
+        for j in range(M):
+            
+            sys['oppo'].param = nodes[:, j, 1]
+            sys['oppo'].update_matrices()
+            mc_oppo[j] = sys['oppo'].predict_lin(T - 1)
+            ax.add_patch(Rectangle(xy=tf_anchor(*mc_oppo[j, :3, cursor]),
+                                   width=4, height=2, linewidth=1, 
+                                   edgecolor=sys['oppo'].color, facecolor='white', fill=False, zorder=10))
 
-            if sys.name == "oppo":
-                ax.add_patch(Rectangle(xy=(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor]-1) ,width=4, height=2, linewidth=1, edgecolor='blue', facecolor='white', fill=False, zorder=10))
-            else:
-                p2, = plt.plot(mc_oppo[i, 0, cursor], mc_oppo[i, 1, cursor], alpha=0.8, color=sys.color, marker="D", markersize=5)
-            # p2, = plt.plot(mc_oppo[i, 0, 0], mc_oppo[i, 1, 0], alpha=0.8, color=sys.color, marker="*", markersize=10)
+            sys['pedes'].param = nodes[:, j, 2]
+            sys['pedes'].update_matrices()
+            mc_pedes[j] = sys['pedes'].predict_lin(T - 1)
+            ax.add_patch(Rectangle(xy=tf_anchor(*mc_pedes[j, :3, cursor]),
+                                   width=4, height=2, linewidth=1, 
+                                   edgecolor=sys['pedes'].color, facecolor='white', fill=False, zorder=10))
 
-        print("p")
+    ax.add_patch(Rectangle(xy=tf_anchor(*tr['ego'][:3, cursor]), angle=tr['ego'][2, cursor]*180/np.pi, 
+                               width=veh_len, height=veh_width, linewidth=2, fill=True,
+                               edgecolor='black', facecolor=c_ego(cursor/T), zorder=10))
+    
+    ax.add_patch(Rectangle(xy=tf_anchor(*tr['oppo'][:3, cursor]), angle=tr['oppo'][2, cursor]*180/np.pi, 
+                            width=veh_len, height=veh_width, linewidth=2, fill=True,
+                            edgecolor='black', facecolor=c_oppo((cursor/T)**4), zorder=10))
 
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
