@@ -10,15 +10,13 @@ from libs.pce_basis import PCEBasis
 import chaospy as cp
 
 
-l = 8 # The lane width
+l = 8                       # The lane width
 q = 2                       # The polynomial order
 veh_width = 1.8
 veh_len = 3.6
 
 gray = (102/255, 102/255, 102/255)
 light_gray = (230/255, 230/255, 230/255)
-
-
 
 # Coefficients of the predicates
 o = np.zeros((4, ))
@@ -54,7 +52,7 @@ def gen_bases():
 
     bias1 = cp.Normal(0, 1e-2)
     intent1 = cp.DiscreteUniform(-1, 1)
-    bias2 = cp.Normal(0, 5e-3)
+    bias2 = cp.Normal(0, 1e-2)
     intent2 = cp.DiscreteUniform(2, 3)
 
     length1 = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
@@ -68,18 +66,17 @@ def gen_bases():
     return B1, B2
 
 
-def scenario(sys, tr, nodes, Q, i):
+def scenario(sys, tr, nodes, Q, i, j):
     oppo_scena = np.zeros([sys['oppo'].n, Q])
     pedes_scena = np.zeros([sys['pedes'].n, Q])
     if i > 0:
         for q in range(0, Q):
-
             sys['oppo'].param = np.array(nodes['oppo_scenario'][:, i, q])
             sys['pedes'].param = np.array(nodes['pedes_scenario'][:, i, q])
             sys['oppo'].update_matrices()
             sys['pedes'].update_matrices()
-            oppo_scena[:, q] = sys['oppo'].f(tr['oppo'][:, i-1, j], v1[:, i-1])
-            pedes_scena[:, q] = sys['pedes'].f(tr['pedes'][:, i-1, j], v2[:, i-1])
+            oppo_scena[:, q] = sys['oppo'].f(tr['oppo'][:, i-1, j], sys['oppo'].useq[:, i-1])
+            pedes_scena[:, q] = sys['pedes'].f(tr['pedes'][:, i-1, j], sys['pedes'].useq[:, i-1])
     oppo_std = np.std(oppo_scena, axis=1)
     pedes_std = np.std(pedes_scena, axis=1)
     return oppo_std, pedes_std
@@ -132,6 +129,22 @@ def safety_specs_multi_modal(B, N, sys_id, std, dist=4, eps=0.05):
 
     phi = mu_safe.always(0, N)
 
+    return phi
+
+
+def get_spec(sys, tr, samples, Q, N, i, j, mode):
+    phi_ego = turn_specs(sys['oppo'].basis, N-i, 'ego')
+    if mode == 0:
+        phi = phi_ego
+    elif mode == 2:
+        oppo_std, pedes_std = scenario(sys, tr, samples, Q, i, j)
+        phi_oppo = safety_specs_multi_modal(sys['oppo'].basis, N-i, std=oppo_std, dist=4, sys_id='oppo')
+        phi_pedes = safety_specs_multi_modal(sys['pedes'].basis, N-i, std=pedes_std, dist=2, sys_id='pedes')
+        phi = phi_ego & phi_oppo & phi_pedes
+    else:
+        phi_oppo = safety_specs(sys['oppo'].basis, N-i, dist=4, sys_id='oppo')
+        phi_pedes = safety_specs(sys['pedes'].basis, N-i, dist=2, sys_id='pedes')
+        phi = phi_ego & phi_oppo & phi_pedes
     return phi
 
 
@@ -227,7 +240,6 @@ def visualize(sys, tr, cursor, mode):
         nodes_p = sys['pedes'].basis.eta.sample([M, ])
 
         # Generate the sampled trajectories of the obstacle vehicle (OV) 
-        
         mc_oppo = np.zeros([M, 4, T])
         mc_pedes = np.zeros([M, 4, T])
 
