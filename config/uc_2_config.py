@@ -1,10 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from libs.pce_basis import PCEBasis
-from stlpy.STL import LinearPredicate
 import math
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import itertools
 from matplotlib.patches import Rectangle, Circle
 from libs.pce_basis import PCEBasis
 import chaospy as cp

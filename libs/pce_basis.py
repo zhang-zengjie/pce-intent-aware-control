@@ -1,7 +1,6 @@
 import numpy as np
 import chaospy as cp
 from itertools import product
-import numpoly
 import math
 from stlpy.STL import LinearPredicate
 import copy
@@ -82,7 +81,7 @@ class PCEBasis:
 
         This chance constraint can be converted to 
 
-        a'x_t + c'hat{z}_t^0 ± coef_i c'\hat{z}_t^i -b >=0     for all i=1, 2, ..., L-1
+        a'x_t + c'hat{z}_t^0 ± coef_i c'\hat{z}_t^i >= b     for all i=1, 2, ..., L-1
         given coef_i = sqrt((1-eps)/eps * (L-1) * E(Phi_i^2))  for all i=1, 2, ..., L-1
 
         hat{z}_t:           n * L dimensional PCE coefficients of z_t
@@ -206,7 +205,6 @@ class PCEBasis:
                             specifications.
         """
 
-        # coef = np.array([math.sqrt((self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
         coef = np.sqrt([(self.L - 1) * abs(cp.E(self.basis[k] ** 2, self.eta)) for k in range(1, self.L)])
 
         for i in range(1, self.L):
