@@ -11,7 +11,7 @@ M = 1               # Runs
 R = np.array([[10, 0], [0, 500]])
 Q = 25              # Scenario numbers
 
-mode = 0    # Select simulation mode: 
+mode = 2    # Select simulation mode: 
             # 0 for no_reaction 
             # 1 for reaction with proposed method
             # 2 for reaction with conventional method
@@ -95,5 +95,5 @@ else:
 
 sys['oppo'].x0 = o0
 sys['pedes'].x0 = p0
-cursors = [24, 26]
+cursors = [22, 26]
 visualize(sys, tr, cursor=cursors[0], mode=mode)

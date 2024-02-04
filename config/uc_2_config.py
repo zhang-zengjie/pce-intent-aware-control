@@ -205,7 +205,7 @@ def visualize(sys, tr, cursor, mode):
     c_ego = plt.get_cmap('Reds')
     for i in range(0, T, 2):
         ax.add_patch(Rectangle(xy=tf_anchor(*tr['ego'][:3, i]), angle=tr['ego'][2, i]*180/np.pi, 
-                               width=veh_len, height=veh_width, linewidth=1, fill=True,
+                               width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
                                edgecolor='red', facecolor=c_ego((i/T)**4), zorder=50))
         
     pev = ax.add_patch(Rectangle(xy=tf_anchor(*tr['ego'][:3, cursor]), angle=tr['ego'][2, cursor]*180/np.pi, 
@@ -219,9 +219,9 @@ def visualize(sys, tr, cursor, mode):
         for i in range(0, T, 2):
 
             ax.add_patch(Rectangle(xy=tf_anchor(*tr['oppo'][:3, i]), angle=tr['oppo'][2, i]*180/np.pi, 
-                            width=veh_len, height=veh_width, linewidth=1, fill=True,
+                            width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
                             edgecolor=(0, 0, 0.5), facecolor=c_oppo((i/T)**4), zorder=10))
-            ax.add_patch(Circle(xy=tuple(tr['pedes'][:2, i]), radius=0.5, linewidth=1, fill=True,
+            ax.add_patch(Circle(xy=tuple(tr['pedes'][:2, i]), radius=0.5, linewidth=1.5, linestyle=':', fill=True,
                             edgecolor=(1, 0.6, 0.2), facecolor=c_pedes((i/T)**4), zorder=10))
 
         pov = ax.add_patch(Rectangle(xy=tf_anchor(*tr['oppo'][:3, cursor]), angle=tr['oppo'][2, cursor]*180/np.pi, 
@@ -246,13 +246,13 @@ def visualize(sys, tr, cursor, mode):
             sys['oppo'].update_matrices()
             mc_oppo[j] = sys['oppo'].predict_lin(T - 1)
             pov = ax.add_patch(Rectangle(xy=tf_anchor(*mc_oppo[j, :3, cursor]), angle=tr['oppo'][2, cursor]*180/np.pi, 
-                                   width=4, height=2, linewidth=1, fill=True, 
+                                   width=4, height=2, linewidth=1, linestyle='--', fill=True, 
                                    edgecolor='black', facecolor=c_oppo((cursor/T)**4), zorder=20-mc_oppo[j, 0, cursor]))
 
             sys['pedes'].param = nodes_p[:, j]
             sys['pedes'].update_matrices()
             mc_pedes[j] = sys['pedes'].predict_lin(T - 1)
-            ppd = ax.add_patch(Circle(xy=tuple(mc_pedes[j, :2, cursor]), radius=0.5, linewidth=1.5, fill=True, 
+            ppd = ax.add_patch(Circle(xy=tuple(mc_pedes[j, :2, cursor]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
                                    edgecolor='black', facecolor=c_pedes((cursor/T)**4), zorder=20-mc_pedes[j, 0, cursor]))
 
     plt.rcParams['pdf.fonttype'] = 42
