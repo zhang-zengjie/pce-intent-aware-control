@@ -1,7 +1,7 @@
 import numpy as np
 from libs.micp_pce_solvern import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
-from config.uc_1_config import gen_pce_specs, lanes, visualize, get_intension, gen_bases
+from config.uc_1_config import *
 from libs.commons import model_checking
 
 
@@ -21,6 +21,7 @@ np.random.seed(7)
 # The assumed control mode of the obstacle vehicle (OV)
 v = get_intension(N, mode)
 B = gen_bases(l)
+
 v0 = 10
 e0 = np.array([0, lanes['fast'], 0, v0*1.33])            # Initial position of the ego vehicle (EV)
 o0 = np.array([2*v0, lanes['slow'], 0, v0])           # Initial position of the obstacle vehicle (OV)
@@ -37,9 +38,10 @@ sys = {ego.name: ego,
 xx = np.zeros([ego.n, N + 1, M])
 zz = np.zeros([oppo.n, N + 1, M])
 
-if False:
+if True:
     
-    nodes = oppo.basis.eta.sample([N, M])
+    nodes_predict = oppo.basis.eta.sample([N, M])
+    nodes_simulate = oppo.basis.eta.sample([N, M])
 
     for j in range(0, M):
         
@@ -49,21 +51,31 @@ if False:
 
         for i in range(0, N):
             
+            # Update specification
+            phi = gen_pce_specs(B, N-i, v0*1.2, 12, 'oppo')
+
+            # Update current states and parameters
             ego.x0 = xx[:, i, j]
             oppo.x0 = zz[:, i, j]
 
             ego.param = np.array([0, l, 1])
-            oppo.param = np.array([nodes[0, i, j], nodes[1, i, j], 1])
+            oppo.param = np.array([nodes_predict[0, i, j], nodes_predict[1, i, j], 1])
 
             ego.update_matrices()
             oppo.update_matrices()
 
-            phi = gen_pce_specs(B, N-i, v0*1.2, 12, 'oppo')
+            # Solve
             solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
             solver.AddQuadraticCost(R)
             x, u, rho, _ = solver.Solve()
+
+            # In case infeasibility
             if rho >= 0:
                 u_opt = u[:, 0]
+
+            # Simulate the next step
+            ego.param = np.array([0, l, 1])
+            oppo.param = np.array([nodes_simulate[0, i, j], nodes_simulate[1, i, j], 1])
 
             xx[:, i + 1, j] = ego.f(xx[:, i, j], u_opt)
             zz[:, i + 1, j] = oppo.f(zz[:, i, j], v[:, i])
