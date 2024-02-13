@@ -14,7 +14,7 @@ lanes = {'right': 1,
 mode_list = ['switch_lane', 'constant_speed', 'speed_up']
 
 x_range_dict = {'switch_lane': [-5, 165],
-                'constant_speed': [25, 185],
+                'constant_speed': [35, 195],
                 'speed_up': [-5, 165]}
 
 legend_loc_dict = {'switch_lane': (0.74, 0.15),
@@ -68,45 +68,42 @@ def gen_bases(l):
 
     return B
 
-def gen_pce_specs(B, N, v_lim, var_lim, sys_id):
+def gen_pce_specs(B, N, v_lim, sys_id):
 
-    mu_safe_1 = B.probability_formula(a1, -a1, d_safe_x, eps, sys_id) | \
-        B.probability_formula(-a1, a1, d_safe_x, eps, sys_id) | \
-        B.probability_formula(a2, -a2, d_safe_y, eps, sys_id) | \
-        B.probability_formula(-a2, a2, d_safe_y, eps, sys_id)
+    mu_safe_1 = B.BeliefSpacePredicate(a1, -a1, d_safe_x, eps, sys_id) | \
+        B.BeliefSpacePredicate(-a1, a1, d_safe_x, eps, sys_id) | \
+        B.BeliefSpacePredicate(a2, -a2, d_safe_y, eps, sys_id) | \
+        B.BeliefSpacePredicate(-a2, a2, d_safe_y, eps, sys_id)
 
-    mu_safe_2 = B.probability_formula(a2, o, lanes['right'] + d_safe_y/2, eps, sys_id) | \
-        B.probability_formula(-a2, o, - lanes['left'] - d_safe_y/2, eps, sys_id)
+    mu_safe_2 = B.BeliefSpacePredicate(a2, o, lanes['right'] + d_safe_y/2, eps, sys_id) | \
+        B.BeliefSpacePredicate(-a2, o, - lanes['left'] - d_safe_y/2, eps, sys_id)
 
-    mu_belief = B.variance_formula(a1, var_lim, sys_id) & \
-        B.expectation_formula(o, -a2, -lanes['middle'], sys_id) & \
-        B.expectation_formula(o, -a4, -v_lim, sys_id)
-    neg_mu_belief = B.neg_variance_formula(a1, var_lim, sys_id) | \
-        B.expectation_formula(o, a2, lanes['middle'], sys_id) | \
-        B.expectation_formula(o, a4, v_lim, sys_id)
+    mu_belief = B.ExpectationPredicate(o, -a2, -lanes['middle'], sys_id) & \
+        B.ExpectationPredicate(o, -a4, -v_lim, sys_id)
+    neg_mu_belief = B.ExpectationPredicate(o, a2, lanes['middle'], sys_id) | \
+        B.ExpectationPredicate(o, a4, v_lim, sys_id)
 
-    mu_overtake = B.probability_formula(a2, o, lanes['slow'] - 0.1, eps, sys_id) & \
-        B.probability_formula(-a2, o, - lanes['slow'] - 0.1, eps, sys_id) & \
-        B.probability_formula(a1, -a1, d_safe_x, eps, sys_id) & \
-        B.probability_formula(a3, o, - 1e-1, eps, sys_id).always(0, 3) & \
-        B.probability_formula(-a3, o, - 1e-1, eps, sys_id).always(0, 3) 
+    mu_overtake = B.BeliefSpacePredicate(a2, o, lanes['slow'] - 0.1, eps, sys_id) & \
+        B.BeliefSpacePredicate(-a2, o, - lanes['slow'] - 0.1, eps, sys_id) & \
+        B.BeliefSpacePredicate(a1, -a1, d_safe_x, eps, sys_id) & \
+        B.BeliefSpacePredicate(a3, o, - 1e-1, eps, sys_id) & \
+        B.BeliefSpacePredicate(-a3, o, - 1e-1, eps, sys_id)
 
     mu_safe = mu_safe_1 & mu_safe_2
+    phi_belief = mu_belief.always(0, N)
+    phi_neg_belief = neg_mu_belief.eventually(0, N)
 
     if N > 3:
-        phi_belief = mu_belief.always(0, N)
-        phi_neg_belief = neg_mu_belief.eventually(0, N)
-        phi_overtake = mu_overtake.eventually(0, N-3)
-        phi = (phi_neg_belief | phi_overtake) & mu_safe.always(0, N)
+        phi = (phi_neg_belief | mu_overtake.always(0, 3).eventually(0, N-3)) & mu_safe.always(0, N)
     else:
-        phi = mu_safe.always(0, N)
+        phi = (phi_neg_belief | mu_overtake.always(0, N)) & mu_safe.always(0, N)
     return phi
 
 
 def visualize(x, z, mode):
 
     T = x.shape[1]
-    M = x.shape[2]
+    M = z.shape[2]
 
     x_range=x_range_dict[mode_list[mode]]
     y_range=[0, 10]
@@ -122,13 +119,26 @@ def visualize(x, z, mode):
     plt.plot(np.arange(x_range[0], x_range[1]), lanes['middle'] * np.ones((x_range[1] - x_range[0], )), linestyle='dashed', linewidth=1, color='black')
     plt.plot(np.arange(x_range[0], x_range[1]), lanes['right'] * np.ones((x_range[1] - x_range[0], )), linestyle='solid', linewidth=2, color='black')
 
+    c_ego = plt.get_cmap('Reds')
+    c_oppo = plt.get_cmap('Blues')
+
     # Plot the trajectory of the ego vehicle (EV)
+    for i in range(0, T - 1):
+        for j in range(0, M):
+            pov = ax.add_patch(Rectangle(xy=(z[0, i, j]-4, z[1, i, j]-0.5), width=4, height=1, angle=z[2, i, j]/3.14*180, linewidth=1, linestyle='dotted',
+                                edgecolor=(0, 0, 51*4/255), fill=True, facecolor=c_oppo(i*0.8/T), zorder=10+i*M+z[1, i, j]))
+
+        pev = ax.add_patch(Rectangle(xy=(x[0, i]-4, x[1, i]-0.5), width=4, height=1, angle=x[2, i]/3.14*180, linewidth=1, linestyle='dotted',
+                                edgecolor=(51*4/255, 0, 0), fill=True, facecolor=c_ego(i*0.8/T), zorder=10+M*T+i*M+x[1, i]))
+        
+    i = T - 1
+
     for j in range(0, M):
-        for i in range(0, T):
-            pev = ax.add_patch(Rectangle(xy=(x[0, i, j]-4, x[1, i, j]-0.5), width=4, height=1, angle=x[2, i, j]/3.14*180, linewidth=1, 
-                                edgecolor='red', fill=True, facecolor=(255/255, 1-i/(T*2-2), 1-i/(T*2-2)), zorder=10+M*T+i*M+x[1, i, j]))
-            pov = ax.add_patch(Rectangle(xy=(z[0, i, j]-4, z[1, i, j]-0.5), width=4, height=1, angle=z[2, i, j]/3.14*180, linewidth=1, 
-                                edgecolor='blue', fill=True, facecolor=(1-i/(T*2-2), 1-i/(T*4-4), 255/255), zorder=10+i*M+z[1, i, j]))
+        ax.add_patch(Rectangle(xy=(z[0, i, j]-4, z[1, i, j]-0.5), width=4, height=1, angle=z[2, i, j]/3.14*180, linewidth=1.5, 
+                                edgecolor=(0, 0, 51/255), fill=True, facecolor=c_oppo(i*0.8/T), zorder=10+i*M+z[1, i, j]))
+
+    ax.add_patch(Rectangle(xy=(x[0, i]-4, x[1, i]-0.5), width=4, height=1, angle=x[2, i]/3.14*180, linewidth=1.5, 
+                                edgecolor=(51/255, 0, 0), fill=True, facecolor=c_ego(i*0.8/T), zorder=10+M*T+i*M+x[1, i]))
 
     plt.xlim(x_range)
     plt.ylim(y_range)

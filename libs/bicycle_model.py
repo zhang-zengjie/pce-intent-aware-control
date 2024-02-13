@@ -51,6 +51,7 @@ class BicycleModel(NonlinearSystem):
 
         if self.PCE:
             self.basis = basis
+            self.x0_pce = None
 
         self.intent_gain = IG
         self.intent_offset = IO
@@ -93,15 +94,17 @@ class BicycleModel(NonlinearSystem):
         e1 = f0(self.param)
 
         return (a0, a1), (b0, b1), (e0, e1)
-    '''
+    
     def update_initial(self, x0):
         self.x0 = x0
 
-    def update_control(self, useq):
+    def update_initial_pce(self, x0_pce):
+        self.x0_pce = x0_pce
 
-        self.useq = useq
-    '''
+    def update_param(self, param):
 
+        self.param = param
+    
     def update_matrices(self):
         self.update_lin_matrices()
 
@@ -178,7 +181,7 @@ class BicycleModel(NonlinearSystem):
         states = np.zeros([self.basis.L, self.n, N + 1])
 
         # Initial condition
-        states[0, :, 0] = self.x0
+        states[:, :, 0] = self.x0_pce
         # Dynamics
         
         if N > 0:
