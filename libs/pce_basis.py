@@ -114,33 +114,33 @@ class PCEBasis:
 
         return formula
 
-    def expectation_formula(self, a, c, b, name):
+    def ExpectationPredicate(self, beta, alpha, gamma, name):
 
         """
         Create STL formulas representing the expectation constraint:
 
-        a'x_t + E(c'z_t) >= b
+        beta'y_t + E(alpha'w_t) >= gamma
 
-        :x_t                n dimensional deterministic signal
-        :z_t                n dimensional stochastic signal
+        :y_t                n dimensional deterministic signal
+        :w_t                n dimensional stochastic signal
 
         This chance constraint can be converted to 
 
-        a'x_t + c'hat{z}_t^0 >= b
+        beta'y_t + alpha'hat{w}_t^0 >= b
 
-        :param a:           coefficient vector (n, )
-        :param c:           coefficient vector (n * L, )
-        :param b:           coefficient scalar (1, )
+        :param beta:           coefficient vector (n, )
+        :param alpha:           coefficient vector (n, )
+        :param gamma:           coefficient scalar (1, )
 
         :return formula:    An ``STLFormula`` specifying the converted deterministic
                             specifications.
         """
 
-        pre_mat = np.zeros((self.L + 1, a.shape[0]))
-        pre_mat[0] = a
-        pre_mat[1] = c
+        pre_mat = np.zeros((self.L + 1, beta.shape[0]))
+        pre_mat[0] = beta
+        pre_mat[1] = alpha
 
-        formula = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), b, name=name)
+        formula = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), gamma, name=name)
 
         return formula
 
@@ -219,4 +219,50 @@ class PCEBasis:
             except:
                 formula = formula_p | formula_n
             
+        return formula
+    
+    def BeliefSpacePredicate(self, beta, alpha, gamma, epsilon, name):
+
+        """
+        Create belief-space predicate representing the chance constraint:
+
+        P(alpha'w_t <= gamma - beta'y_t) >= 1 - eps
+
+        :y_t                n dimensional deterministic signal
+        :w_t                n dimensional stochastic signal
+
+        This chance constraint can be converted to 
+
+        beta'y_t + alpha'hat{w}_t^0 ± kappa * sqrt(E(Phi_i^2)) * alpha'\hat{w}_t^i <= gamma     for all i=1, 2, ..., L-1
+
+        kappa = sqrt((1-eps)/eps)
+        hat{w}_t = {hat{w}_t^0, hat{w}_t^1, ..., hat{w}_{L-1}}:  n * L dimensional PCE coefficients of w_t
+
+        :param alpha:       coefficient vector for stochastic signal w_t (n, )
+        :param beta:        coefficient vector for deterministic signal y_t (n, )
+        :param gamma:       coefficient scalar (1, )
+        :param epsilon:     risk level (1, )
+
+        :return formula:    An ``STLFormula`` specifying the converted deterministic
+                            specifications.
+        """
+
+        kappa = math.sqrt((1 - epsilon)/epsilon)
+
+        coef = kappa * np.array([math.sqrt(abs(cp.E(self.basis[k] ** 2, self.eta))) for k in range(1, self.L)])
+
+        for i in range(1, self.L):
+            pre_mat = np.zeros((self.L + 1, beta.shape[0]))
+            pre_mat[0] = beta
+            pre_mat[1] = alpha
+            pre_mat[i + 1] = coef[i - 1] * alpha
+            formula_p = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), gamma, name=name)
+            pre_mat[i + 1] = - coef[i - 1] * alpha
+            formula_n = LinearPredicate(copy.copy(pre_mat.reshape((1, -1))), gamma, name=name)
+
+            try:
+                formula &= formula_p & formula_n
+            except:
+                formula = formula_p & formula_n
+
         return formula

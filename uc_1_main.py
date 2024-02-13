@@ -8,10 +8,10 @@ from libs.commons import model_checking
 Ts = 1    # The discrete sampling time Delta_t
 l = 4       # The baseline value of the vehicle length
 N = 15      # The control horizon
-M = 1
-R = np.array([[1e4, 0], [0, 1e-4]])
+M = 100
+R = np.array([[1e4, 0], [0, 1e-2]])
 
-mode = 0    # Select intention mode: 
+mode = 2    # Select intention mode: 
             # 0 for switching-lane OV 
             # 1 for constant-speed OV
             # 2 for speeding-up OV
@@ -35,56 +35,59 @@ oppo = BicycleModel(Ts, useq=v, basis=B, pce=True, name='oppo')     # Dynamic mo
 sys = {ego.name: ego,
        oppo.name: oppo}
 
-xx = np.zeros([ego.n, N + 1, M])
-zz = np.zeros([oppo.n, N + 1, M])
+xx = np.zeros([ego.n, N + 1])
+zz = np.zeros([oppo.basis.L, oppo.n, N + 1])
 
-if True:
-    
-    nodes_predict = oppo.basis.eta.sample([M, ])
-    nodes_simulate = oppo.basis.eta.sample([M, ])
-
-    for j in range(0, M):
+if False:
         
-        xx[:, 0, j] = e0
-        zz[:, 0, j] = o0
-        u_opt = np.zeros((2, ))
+    xx[:, 0,] = e0
+    zz[0, :, 0] = o0
+    u_opt = np.zeros((2, ))
 
-        ego.param = np.array([0, l, 1])
-        oppo.param = np.array([nodes_predict[0, j], nodes_predict[1, j], 1])
+    ego.update_param(np.array([0, l, 1]))
+    oppo.update_param(np.array([0, l, 1]))
 
-        for i in range(0, N):
-            
-            # Update specification
-            phi = gen_pce_specs(B, N-i, v0*1.2, 12, 'oppo')
+    for i in range(0, N):
+        
+        # Update specification
+        phi = gen_pce_specs(B, N-i, v0*1.2, 'oppo')
 
-            # Update current states and parameters
-            ego.x0 = xx[:, i, j]
-            oppo.x0 = zz[:, i, j]
+        # Update current states and parameters
+        ego.update_initial(xx[:, i])
+        oppo.update_initial(zz[0, :, i])
+        oppo.update_initial_pce(zz[:, :, i])
 
-            ego.update_matrices()
-            oppo.update_matrices()
+        ego.update_matrices()
+        oppo.update_matrices()
 
-            # Solve
-            solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
-            solver.AddQuadraticCost(R)
-            x, u, rho, _ = solver.Solve()
+        # Solve
+        solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
+        solver.AddQuadraticCost(R)
+        x, u, rho, _ = solver.Solve()
 
-            # In case infeasibility
-            if rho >= 0:
-                u_opt = u[:, 0]
+        # In case infeasibility
+        if rho >= 0:
+            u_opt = u[:, 0]
 
-            # Simulate the next step
+        # Probabilistic prediction
+        zz[:, :, i + 1] = oppo.predict_pce(1)[:, :, 1]
 
-            xx[:, i + 1, j] = ego.f(xx[:, i, j], u_opt)
-            zz[:, i + 1, j] = oppo.f(zz[:, i, j], v[:, i])
+        # Simulate the next step
+        xx[:, i + 1] = ego.f(xx[:, i], u_opt)
+        zz[0, :, i + 1] = oppo.f(zz[0, :, i], v[:, i])
 
-        np.save('results/case_1/x_' + str(mode) + '_seed_' + str(j) + '_c.npy', xx[:, :, j])
-        np.save('results/case_1/z_' + str(mode) + '_seed_' + str(j) + '_c.npy', zz[:, :, j])
+    np.save('results/case_1/x_' + str(mode) + '_seed_' + '_c.npy', xx)
+    np.save('results/case_1/z_' + str(mode) + '_seed_' + '_c.npy', zz)
 
 else:
 
-    for j in range(0, M):
-        xx[:, :, j] = np.load('results/case_1/x_' + str(mode) + '_seed_' + str(j) + '_c.npy')
-        zz[:, :, j] = np.load('results/case_1/z_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+    xx = np.load('results/case_1/x_' + str(mode) + '_seed_' + '_c.npy')
 
-visualize(xx[:, :N-3, :], zz[:, :N-3, :], mode)
+zz_s = np.zeros([oppo.n, N + 1, M])
+samples = oppo.basis.eta.sample([M, ])
+for j in range(0, M):
+    oppo.update_param(np.array([samples[0, j], samples[1, j], 1]))
+    oppo.update_initial(o0)
+    zz_s[:, :, j] = oppo.predict(N)
+
+visualize(xx[:, :N-3], zz_s[:, :, :N-3], mode)
