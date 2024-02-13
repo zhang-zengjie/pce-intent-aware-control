@@ -40,14 +40,17 @@ zz = np.zeros([oppo.n, N + 1, M])
 
 if True:
     
-    nodes_predict = oppo.basis.eta.sample([N, M])
-    nodes_simulate = oppo.basis.eta.sample([N, M])
+    nodes_predict = oppo.basis.eta.sample([M, ])
+    nodes_simulate = oppo.basis.eta.sample([M, ])
 
     for j in range(0, M):
         
         xx[:, 0, j] = e0
         zz[:, 0, j] = o0
         u_opt = np.zeros((2, ))
+
+        ego.param = np.array([0, l, 1])
+        oppo.param = np.array([nodes_predict[0, j], nodes_predict[1, j], 1])
 
         for i in range(0, N):
             
@@ -57,9 +60,6 @@ if True:
             # Update current states and parameters
             ego.x0 = xx[:, i, j]
             oppo.x0 = zz[:, i, j]
-
-            ego.param = np.array([0, l, 1])
-            oppo.param = np.array([nodes_predict[0, i, j], nodes_predict[1, i, j], 1])
 
             ego.update_matrices()
             oppo.update_matrices()
@@ -74,8 +74,6 @@ if True:
                 u_opt = u[:, 0]
 
             # Simulate the next step
-            ego.param = np.array([0, l, 1])
-            oppo.param = np.array([nodes_simulate[0, i, j], nodes_simulate[1, i, j], 1])
 
             xx[:, i + 1, j] = ego.f(xx[:, i, j], u_opt)
             zz[:, i + 1, j] = oppo.f(zz[:, i, j], v[:, i])

@@ -37,7 +37,7 @@ samples = {'oppo_simulate': sys['oppo'].basis.eta.sample([N, M]),               
            'oppo_scenario': sys['oppo'].basis.eta.sample([N, Q]),               # Samples for scenario of the opponent vehicle (OV)
            'pedes_scenario': sys['pedes'].basis.eta.sample([N, Q])}             # Samples for scenario of the pedestrian (PD)
 
-if False:
+if True:
 
     for j in range(0, M):
 
