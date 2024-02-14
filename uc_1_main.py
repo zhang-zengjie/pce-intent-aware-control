@@ -76,12 +76,12 @@ if False:
         xx[:, i + 1] = ego.f(xx[:, i], u_opt)
         zz[0, :, i + 1] = oppo.f(zz[0, :, i], v[:, i])
 
-    np.save('results/case_1/x_' + str(mode) + '_seed_' + '_c.npy', xx)
-    np.save('results/case_1/z_' + str(mode) + '_seed_' + '_c.npy', zz)
+    np.save('results/case_1/x_mode_' + str(mode) + '.npy', xx)
+    np.save('results/case_1/z_mode_' + str(mode) + '.npy', zz)
 
 else:
 
-    xx = np.load('results/case_1/x_' + str(mode) + '_seed_' + '_c.npy')
+    xx = np.load('results/case_1/x_mode_' + str(mode) + '.npy')
 
 zz_s = np.zeros([oppo.n, N + 1, M])
 samples = oppo.basis.eta.sample([M, ])
