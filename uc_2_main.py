@@ -6,12 +6,12 @@ from config.uc_2_config import *
 
 Ts = 0.5            # The baseline value of sampling time delta_t
 l = 4               # The baseline value of the vehicle length
-N = 30              # The control horizon
-M = 1               # Runs
-R = np.array([[10, 0], [0, 500]])
+N = 36              # The control horizon
+M = 100               # Runs
+R = np.array([[1, 0], [0, 50]])
 Q = 25              # Scenario numbers
 
-mode = 2    # Select simulation mode: 
+mode = 1    # Select simulation mode: 
             # 0 for no_reaction 
             # 1 for reaction with proposed method
             # 2 for reaction with conventional method
@@ -26,74 +26,84 @@ sys = {'ego': BicycleModel(Ts, name='ego'),                                     
        'oppo': BicycleModel(Ts, useq=v1, basis=B1, pce=True, name='oppo'),      # Dynamic model of the opponent vehicle (OV)
        'pedes': BicycleModel(Ts, useq=v2, basis=B2, pce=True, name='pedes')}    # Dynamic model of the pedestrian (PD)
 
-tr = {'ego': np.zeros([sys['ego'].n, N + 1, M]),                                # Simulated trajectories of the ego vehicle (EV)
-      'oppo': np.zeros([sys['oppo'].n, N + 1, M]),                              # Simulated trajectories of the opponent vehicle (OV)
-      'pedes': np.zeros([sys['pedes'].n, N + 1, M])}                            # Simulated trajectories of the pedestrian (PD)
+spec_samples = {'oppo': sys['oppo'].basis.eta.sample([N, Q]),               # Samples for scenario of the opponent vehicle (OV)
+                'pedes': sys['pedes'].basis.eta.sample([N, Q])}             # Samples for scenario of the pedestrian (PD)
 
-samples = {'oppo_simulate': sys['oppo'].basis.eta.sample([N, M]),               # Samples for simulate of the opponent vehicle (OV)
-           'pedes_simulate': sys['pedes'].basis.eta.sample([N, M]),             # Samples for simulate of the pedestrian (PD)
-           'oppo_predict': sys['oppo'].basis.eta.sample([N, M]),                # Samples for prediction of the opponent vehicle (OV)
-           'pedes_predict': sys['pedes'].basis.eta.sample([N, M]),              # Samples for prediction of the pedestrian (PD)
-           'oppo_scenario': sys['oppo'].basis.eta.sample([N, Q]),               # Samples for scenario of the opponent vehicle (OV)
-           'pedes_scenario': sys['pedes'].basis.eta.sample([N, Q])}             # Samples for scenario of the pedestrian (PD)
+tr = {'ego': np.zeros([sys['ego'].n, N + 1]),                                # Simulated trajectories of the ego vehicle (EV)
+      'oppo': np.zeros([sys['oppo'].basis.L, sys['oppo'].n, N + 1]),         # Simulated trajectories of the opponent vehicle (OV)
+      'pedes': np.zeros([sys['pedes'].basis.L, sys['pedes'].n, N + 1])}      # Simulated trajectories of the pedestrian (PD)
 
 if True:
 
-    for j in range(0, M):
+    tr['ego'][:, 0] = e0
+    tr['oppo'][0, :, 0] = o0
+    tr['pedes'][0, :, 0] = p0
+    u_opt = np.zeros((2, ))
 
-        tr['ego'][:, 0, j] = e0
-        tr['oppo'][:, 0, j] = o0
-        tr['pedes'][:, 0, j] = p0
-        u_opt = np.zeros((2, ))
+    sys['ego'].update_param(np.array([0, l, 1]))
+    sys['oppo'].update_param(np.array([0, l, 1]))
+    sys['pedes'].update_param(np.array([0, l, 1]))
 
-        for i in range(0, N):
+    for i in range(0, N):
+        
+        # Update specification
+        phi = get_spec(sys, tr, spec_samples, Q, N, i, mode)
+
+        # Update current states and parameters
+        sys['ego'].update_initial(tr['ego'][:, i])
+        sys['oppo'].update_initial(tr['oppo'][0, :, i])
+        sys['oppo'].update_initial_pce(tr['oppo'][:, :, i])
+        sys['pedes'].update_initial(tr['pedes'][0, :, i])
+        sys['pedes'].update_initial_pce(tr['pedes'][:, :, i])
+
+        sys['ego'].update_matrices()
+        sys['oppo'].update_matrices()
+        sys['pedes'].update_matrices()
+
+        # Solve
+        solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
+        solver.AddQuadraticCost(R)
+        x, u, rho, _ = solver.Solve()
+        
+        # In case infeasibility
+        if rho >= 0:
+            u_opt = u[:, 0]
+        else:
+            u_opt[0] = 0
+            u_opt[1] = -tr['ego'][3, i]/Ts
             
-            # Update specification
-            phi = get_spec(sys, tr, samples, Q, N, i, j, mode)
-
-            # Update current states and parameters
-            sys['ego'].x0 = tr['ego'][:, i, j]
-            sys['oppo'].x0 = tr['oppo'][:, i, j]
-            sys['pedes'].x0 = tr['pedes'][:, i, j]
-
-            sys['ego'].param = np.array([0, l, 1])
-            sys['oppo'].param = np.array(samples['oppo_predict'][:, i, j])
-            sys['pedes'].param = np.array(samples['pedes_predict'][:, i, j])
-
-            sys['ego'].update_matrices()
-            sys['oppo'].update_matrices()
-            sys['pedes'].update_matrices()
-
-            # Solve
-            solver = PCEMICPSolver(phi, sys, N-i, robustness_cost=True)
-            solver.AddQuadraticCost(R)
-            x, u, rho, _ = solver.Solve()
+        # Probabilistic prediction
             
-            # In case infeasibility
-            if rho >= 0:
-                u_opt = u[:, 0]
-                
-            # Simulate the next step
-            sys['ego'].param = np.array([0, l, 1])
-            sys['oppo'].param = np.array(samples['oppo_simulate'][:, i, j])
-            sys['pedes'].param = np.array(samples['pedes_simulate'][:, i, j])
+        tr['oppo'][:, :, i + 1] = sys['oppo'].predict_pce(1)[:, :, 1]
+        tr['pedes'][:, :, i + 1] = sys['pedes'].predict_pce(1)[:, :, 1]
 
-            tr['ego'][:, i + 1, j] = sys['ego'].f(tr['ego'][:, i, j], u_opt)
-            tr['oppo'][:, i + 1, j] = sys['oppo'].f(tr['oppo'][:, i, j], sys['oppo'].useq[:, i])
-            tr['pedes'][:, i + 1, j] = sys['pedes'].f(tr['pedes'][:, i, j], sys['pedes'].useq[:, i])
-            
-        np.save('results/case_2/xx_' + 'ego' + '_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy', tr['ego'][:, :, j])
-        np.save('results/case_2/xx_' + 'oppo' + '_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy', tr['oppo'][:, :, j])
-        np.save('results/case_2/xx_' + 'pedes' + '_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy', tr['pedes'][:, :, j])
+        # Simulate the next step
+
+        tr['ego'][:, i + 1] = sys['ego'].f(tr['ego'][:, i], u_opt)
+        tr['oppo'][0, :, i + 1] = sys['oppo'].f(tr['oppo'][0, :, i], sys['oppo'].useq[:, i])
+        tr['pedes'][0, :, i + 1] = sys['pedes'].f(tr['pedes'][0, :, i], sys['pedes'].useq[:, i])
+        
+    np.save('results/case_2/xx_' + 'ego' + '_mode_' + str(mode) + '_seed_c.npy', tr['ego'])
+    np.save('results/case_2/xx_' + 'oppo' + '_mode_' + str(mode) + '_seed_c.npy', tr['oppo'])
+    np.save('results/case_2/xx_' + 'pedes' + '_mode_' + str(mode) + '_seed_c.npy', tr['pedes'])
         
 else:
 
-    for j in range(0, M):
-        tr['ego'][:, :, j] = np.load('results/case_2/xx_' + 'ego' + '_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy')
-        tr['oppo'][:, :, j] = np.load('results/case_2/xx_' + 'oppo' + '_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy')
-        tr['pedes'][:, :, j] = np.load('results/case_2/xx_' + 'pedes' + '_mode_' + str(mode) + '_seed_' + str(j) + '_c.npy')
+    tr['ego'] = np.load('results/case_2/xx_' + 'ego' + '_mode_' + str(mode) + '_seed_c.npy')
 
-sys['oppo'].x0 = o0
-sys['pedes'].x0 = p0
-cursors = [22, 26]
-visualize(sys, tr, cursor=cursors[0], mode=mode)
+cursors = [24, 26]
+
+tr_oppo_s = np.zeros([M, sys['oppo'].n, N + 1])
+tr_pedes_s = np.zeros([M, sys['pedes'].n, N + 1])
+samples_oppo = sys['oppo'].basis.eta.sample([M, ])
+samples_pedes = sys['pedes'].basis.eta.sample([M, ])
+
+for j in range(0, M):
+    sys['oppo'].update_param(samples_oppo[:, j])
+    sys['pedes'].update_param(samples_pedes[:, j])
+    sys['oppo'].update_initial(o0)
+    sys['pedes'].update_initial(p0)
+    tr_oppo_s[j, :, :] = sys['oppo'].predict(N)
+    tr_pedes_s[j, :, :] = sys['pedes'].predict(N)
+
+visualize(tr['ego'], tr_oppo_s, tr_pedes_s, cursor=cursors[0])

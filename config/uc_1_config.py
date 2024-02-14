@@ -70,24 +70,24 @@ def gen_bases(l):
 
 def gen_pce_specs(B, N, v_lim, sys_id):
 
-    mu_safe_1 = B.BeliefSpacePredicate(a1, -a1, d_safe_x, eps, sys_id) | \
-        B.BeliefSpacePredicate(-a1, a1, d_safe_x, eps, sys_id) | \
-        B.BeliefSpacePredicate(a2, -a2, d_safe_y, eps, sys_id) | \
-        B.BeliefSpacePredicate(-a2, a2, d_safe_y, eps, sys_id)
+    mu_safe_1 = B.gen_bs_predicate(a1, -a1, d_safe_x, eps, sys_id) | \
+        B.gen_bs_predicate(-a1, a1, d_safe_x, eps, sys_id) | \
+        B.gen_bs_predicate(a2, -a2, d_safe_y, eps, sys_id) | \
+        B.gen_bs_predicate(-a2, a2, d_safe_y, eps, sys_id)
 
-    mu_safe_2 = B.BeliefSpacePredicate(a2, o, lanes['right'] + d_safe_y/2, eps, sys_id) | \
-        B.BeliefSpacePredicate(-a2, o, - lanes['left'] - d_safe_y/2, eps, sys_id)
+    mu_safe_2 = B.gen_bs_predicate(a2, o, lanes['right'] + d_safe_y/2, eps, sys_id) | \
+        B.gen_bs_predicate(-a2, o, - lanes['left'] - d_safe_y/2, eps, sys_id)
 
-    mu_belief = B.ExpectationPredicate(o, -a2, -lanes['middle'], sys_id) & \
-        B.ExpectationPredicate(o, -a4, -v_lim, sys_id)
-    neg_mu_belief = B.ExpectationPredicate(o, a2, lanes['middle'], sys_id) | \
-        B.ExpectationPredicate(o, a4, v_lim, sys_id)
+    mu_belief = B.gen_bs_predicate(o, -a2, -lanes['middle'], 1, sys_id) & \
+        B.gen_bs_predicate(o, -a4, -v_lim, 1, sys_id)
+    neg_mu_belief = B.gen_bs_predicate(o, a2, lanes['middle'], 1, sys_id) | \
+        B.gen_bs_predicate(o, a4, v_lim, 1, sys_id)
 
-    mu_overtake = B.BeliefSpacePredicate(a2, o, lanes['slow'] - 0.1, eps, sys_id) & \
-        B.BeliefSpacePredicate(-a2, o, - lanes['slow'] - 0.1, eps, sys_id) & \
-        B.BeliefSpacePredicate(a1, -a1, d_safe_x, eps, sys_id) & \
-        B.BeliefSpacePredicate(a3, o, - 1e-1, eps, sys_id) & \
-        B.BeliefSpacePredicate(-a3, o, - 1e-1, eps, sys_id)
+    mu_overtake = B.gen_bs_predicate(a2, o, lanes['slow'] - 0.1, eps, sys_id) & \
+        B.gen_bs_predicate(-a2, o, - lanes['slow'] - 0.1, eps, sys_id) & \
+        B.gen_bs_predicate(a1, -a1, d_safe_x, eps, sys_id) & \
+        B.gen_bs_predicate(a3, o, - 1e-1, eps, sys_id) & \
+        B.gen_bs_predicate(-a3, o, - 1e-1, eps, sys_id)
 
     mu_safe = mu_safe_1 & mu_safe_2
     phi_belief = mu_belief.always(0, N)
