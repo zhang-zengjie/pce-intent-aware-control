@@ -11,7 +11,7 @@ M = 100               # Runs
 R = np.array([[1, 0], [0, 50]])
 Q = 25              # Scenario numbers
 
-mode = 1    # Select simulation mode: 
+mode = 0    # Select simulation mode: 
             # 0 for no_reaction 
             # 1 for reaction with proposed method
             # 2 for reaction with conventional method
@@ -83,13 +83,13 @@ if True:
         tr['oppo'][0, :, i + 1] = sys['oppo'].f(tr['oppo'][0, :, i], sys['oppo'].useq[:, i])
         tr['pedes'][0, :, i + 1] = sys['pedes'].f(tr['pedes'][0, :, i], sys['pedes'].useq[:, i])
         
-    np.save('results/case_2/xx_' + 'ego' + '_mode_' + str(mode) + '_seed_c.npy', tr['ego'])
-    np.save('results/case_2/xx_' + 'oppo' + '_mode_' + str(mode) + '_seed_c.npy', tr['oppo'])
-    np.save('results/case_2/xx_' + 'pedes' + '_mode_' + str(mode) + '_seed_c.npy', tr['pedes'])
+    np.save('results/case_2/x_mode_' + str(mode) + '.npy', tr['ego'])
+    np.save('results/case_2/z_oppo_mode_' + str(mode) + '.npy', tr['oppo'])
+    np.save('results/case_2/z_pedes_mode_' + str(mode) + '.npy', tr['pedes'])
         
 else:
 
-    tr['ego'] = np.load('results/case_2/xx_' + 'ego' + '_mode_' + str(mode) + '_seed_c.npy')
+    tr['ego'] = np.load('results/case_2/x_mode_' + str(mode) + '.npy')
 
 cursors = [24, 26]
 
