@@ -29,7 +29,7 @@ def get_intentions(T):
     u1 = np.array([gamma1, a1])
 
     gamma2 = np.linspace(0, 0, T)
-    a2 = np.linspace(0, 0.1, T)
+    a2 = np.linspace(0.02, 0, T)
     u2 = np.array([gamma2, a2])
 
     return u1, u2
@@ -48,7 +48,7 @@ def gen_bases():
     bias1 = cp.Normal(0, 1e-2)
     intent1 = cp.DiscreteUniform(-1, 1)
     bias2 = cp.Normal(0, 1e-2)
-    intent2 = cp.DiscreteUniform(2, 3)
+    intent2 = cp.DiscreteUniform(1, 2)
 
     length1 = cp.Uniform(lower=l-1e-2, upper=l+1e-2)
     eta1 = cp.J(bias1, length1, intent1) # Generate the random variable instance
@@ -163,7 +163,7 @@ def model_checking(x, z, spec, k):
 
 def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
 
-    fig = plt.figure(figsize=(4, 3.8))
+    fig = plt.figure(figsize=(3.5, 3.3))
     ax = plt.axes()
     
     x_lim = [-3*l, 3*l]
@@ -228,9 +228,9 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
     plt.rcParams['ps.fonttype'] = 42
     plt.xlim(x_lim)
     plt.ylim(y_lim)
-    plt.xlabel('x position (m)', fontsize="10")
-    plt.ylabel('y position (m)', fontsize="10")
-    plt.legend([pev, pov, ppd], ['EV', 'OV', 'PD'], loc=(0.7, 0.06), fontsize="10", ncol=1)
+    plt.xlabel('x position (m)', fontsize="12")
+    plt.ylabel('y position (m)', fontsize="12")
+    plt.legend([pev, pov, ppd], ['Ego vehicle', 'Opponent vehicle', 'Pedestrian'], loc=(0.03, 0.03), fontsize="10", ncol=1)
     plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.13)
     fig.tight_layout()
 

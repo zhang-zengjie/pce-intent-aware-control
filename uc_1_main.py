@@ -11,7 +11,7 @@ N = 15      # The control horizon
 M = 100
 R = np.array([[1e4, 0], [0, 1e-2]])
 
-mode = 2    # Select intention mode: 
+mode = 0    # Select intention mode: 
             # 0 for switching-lane OV 
             # 1 for constant-speed OV
             # 2 for speeding-up OV
@@ -90,4 +90,4 @@ for j in range(0, M):
     oppo.update_initial(o0)
     zz_s[:, :, j] = oppo.predict(N)
 
-visualize(xx[:, :N-3], zz_s[:, :, :N-3], mode)
+visualize(xx[:, :N-1], zz_s[:, :, :N-1], mode)
