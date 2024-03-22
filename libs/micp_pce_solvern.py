@@ -70,8 +70,7 @@ class PCEMICPSolver(STLSolver):
         # Set up the optimization problem
         self.model = gp.Model("PCE_STL_MICP")
 
-        # Store the cost function, which will added to self.model right before solving
-        self.cost = 0.0
+        
 
         # Set some model parameters
         if not self.presolve:
@@ -93,12 +92,14 @@ class PCEMICPSolver(STLSolver):
         self.AddSTLConstraints()
         # self.AddRobustnessConstraint()
 
-        self.AddDynamicsConstraints(0)
+        # self.AddDynamicsConstraints(0)
         # Add cost and constraints to the optimization problem        
 
-        self.AddQuadraticCost(ego.R)
-        if robustness_cost:
-            self.AddRobustnessCost()
+        # Store the cost function, which will added to self.model right before solving
+        #self.cost = 0.0
+
+        #self.AddQuadraticCost(0)
+        #self.AddRobustnessCost()
         
         if self.verbose:
             print(f"Setup complete in {time.time() - st} seconds.")
@@ -114,15 +115,19 @@ class PCEMICPSolver(STLSolver):
             self.model.addConstr(x_min <= self.x[:, t])
             self.model.addConstr(self.x[:, t] <= x_max)
 
-    def AddQuadraticCost(self, R):
-        self.cost += self.u[:, 0] @ R @ self.u[:, 0]
-        for t in range(1, self.T):
-            self.cost += self.u[:, t] @ R @ self.u[:, t]
+    def AddQuadraticCost(self, t_curr):
+        R = self.syses['ego'].R
+        
+        if t_curr < self.T:
+            for t in range(t_curr, self.T):
+                self.cost += self.u[:, t] @ R @ self.u[:, t]
+        else:
+            self.cost += self.u[:, t_curr] @ R @ self.u[:, t_curr]
 
         print(type(self.cost))
 
     def AddRobustnessCost(self):
-        self.cost -= (1 * self.rho)[0]
+        self.cost -= (1 * self.rho)
 
     def AddRobustnessConstraint(self, rho_min=0.0):
         self.model.addConstr(self.rho >= rho_min)
@@ -175,6 +180,12 @@ class PCEMICPSolver(STLSolver):
 
     def RemoveDynamicsConstraints(self):
         self.model.remove(self.DynamicsConstrs)
+        self.model.update()
+        self.DynamicsConstrs = []
+
+    def AddInputConstraint(self, t, u):
+        self.model.addConstr( self.u[:, t] == u )
+        self.model.update()
 
 
     def AddSTLConstraints(self):

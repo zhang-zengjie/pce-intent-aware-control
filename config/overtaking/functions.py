@@ -96,10 +96,11 @@ def gen_pce_specs(B, N, v_lim, sys_id):
     phi_belief = mu_belief.always(0, N)
     phi_neg_belief = neg_mu_belief.eventually(0, N)
 
-    if N > 3:
-        phi = (phi_neg_belief | mu_overtake.always(0, 3).eventually(0, N-3)) & mu_safe.always(0, N)
-    else:
-        phi = (phi_neg_belief | mu_overtake.always(0, N)) & mu_safe.always(0, N)
+
+    phi = (phi_neg_belief | mu_overtake.always(0, 3).eventually(0, N-3)) & mu_safe.always(0, N)
+
+    # phi = mu_safe.always(0, N)
+
     return phi
 
 

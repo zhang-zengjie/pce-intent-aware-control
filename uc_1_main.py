@@ -1,8 +1,9 @@
 import numpy as np
 from libs.micp_pce_solvern import PCEMICPSolver
-from config.overtaking.params import ego, oppo, N, B, R, mode, v0, e0, o0
+from config.overtaking.params import ego, oppo, N, B, mode, v0
 from config.overtaking.functions import gen_pce_specs
 from libs.commons import model_checking
+from gurobipy import GRB
 
 
 # Initialize the solver
@@ -10,13 +11,6 @@ sys = {ego.name: ego,
        oppo.name: oppo}
 
 u_opt = np.zeros((2, ))
-
-xx = np.zeros([ego.n, N + 1])
-zz = np.zeros([oppo.basis.L, oppo.n, N + 1])
-
-v0 = 10
-xx[:, 0] = e0      
-zz[0, :, 0] = o0          
 
 phi = gen_pce_specs(B, N, v0*1.2, 'oppo')
 
@@ -28,22 +22,29 @@ for i in range(N):
     
     solver.syses["ego"].update_matrices(i)
     solver.syses["oppo"].update_matrices(i)
-
-    solver.syses["oppo"].predict(i, N)
-    solver.syses["oppo"].predict_pce(i, N)
+    solver.syses['oppo'].predict_pce(i, N)
+    solver.syses['oppo'].predict(i, N)
 
     # Solve
-    solver.RemoveDynamicsConstraints()
-    solver.AddDynamicsConstraints(i)
     
+    solver.AddDynamicsConstraints(i)
+
+    solver.cost = 0.0
+    
+    solver.AddRobustnessCost()
+    # solver.AddRobustnessConstraint()
+    solver.AddQuadraticCost(i)
     x, u, rho, _ = solver.Solve()
 
+    solver.RemoveDynamicsConstraints()
     # In case infeasibility
-    if rho >= 0:
-        u_opt = u[:, 0]
+    if (rho is not None) & (rho >=0):
+        u_opt = u[:, i]
 
-    solver.syses["ego"].update_measurements(i, u_opt)
-    solver.syses["oppo"].update_measurements(i, oppo.useq[:, i])
+    solver.syses["ego"].apply_control(i, u_opt)
+    solver.syses["oppo"].apply_control(i, oppo.useq[:, i])
+
+    # solver.AddInputConstraint(i, u_opt)
 
 
 np.save('results/case_1/x_mode_' + str(mode) + '.npy', solver.syses["ego"].states)
