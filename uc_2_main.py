@@ -1,7 +1,8 @@
 import numpy as np
 from libs.micp_pce_solvern import PCEMICPSolver
 from libs.bicycle_model import BicycleModel
-from config.uc_2_config import *
+from config.intersection.params import *
+from config.intersection.functions import *
 
 
 Ts = 0.5            # The baseline value of sampling time delta_t
@@ -11,7 +12,7 @@ M = 100               # Runs
 R = np.array([[1, 0], [0, 50]])
 Q = 25              # Scenario numbers
 
-mode = 0    # Select simulation mode: 
+mode = 1    # Select simulation mode: 
             # 0 for no_reaction 
             # 1 for reaction with proposed method
             # 2 for reaction with conventional method
@@ -106,4 +107,6 @@ for j in range(0, M):
     tr_oppo_s[j, :, :] = sys['oppo'].predict(N)
     tr_pedes_s[j, :, :] = sys['pedes'].predict(N)
 
-visualize(tr['ego'], tr_oppo_s, tr_pedes_s, cursor=cursors[1])
+# visualize(tr['ego'], tr_oppo_s, tr_pedes_s, cursor=cursors[1])
+
+record(tr['ego'], tr_oppo_s, tr_pedes_s, mode, Ts=Ts, fps=12)

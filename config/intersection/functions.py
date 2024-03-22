@@ -5,6 +5,8 @@ import math
 from matplotlib.patches import Rectangle, Circle
 from libs.pce_basis import PCEBasis
 import chaospy as cp
+from scipy.interpolate import CubicSpline
+from matplotlib.animation import FFMpegWriter
 
 
 l = 8                       # The lane width
@@ -36,9 +38,9 @@ def get_intentions(T):
 
 def get_initials():
 
-    e0 = np.array([-l*2, -l/2, 0, 2])              # Initial position of the ego vehicle (EV)
-    o0 = np.array([105, l/2, math.pi, 8])             # Initial position of the obstacle vehicle (OV)
-    p0 = np.array([1.2*l, 1.2*l, math.pi, 0])        # Initial position of the pedestrian (PD)
+    e0 = np.array([-l*2, -l/2, 0, 2])              # Initial state of the ego vehicle (EV)
+    o0 = np.array([105, l/2, math.pi, 8])             # Initial state of the obstacle vehicle (OV)
+    p0 = np.array([1.2*l, 1.2*l, math.pi, 0])        # Initial state of the pedestrian (PD)
 
     return e0, o0, p0
 
@@ -235,3 +237,98 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
     fig.tight_layout()
 
     plt.show()
+
+
+def record(tr_ego, tr_oppo, tr_pedes, mode, Ts=0.5, fps=12):
+
+    fig = plt.figure(figsize=(6, 5.7))
+    ax = plt.axes()
+    plt.rcParams['animation.ffmpeg_path'] = 'C:\\Program Files (x86)\\ffmpeg-full_build\\bin\\ffmpeg.exe'
+
+    T = tr_ego.shape[1]
+    M = tr_oppo.shape[0]
+    ts = np.arange(0, T)
+    tau = np.arange(0, T, 1/(fps*Ts))
+
+    e_func_x = CubicSpline(ts, tr_ego[0])
+    e_func_y = CubicSpline(ts, tr_ego[1])
+    e_func_t = CubicSpline(ts, tr_ego[2])
+    o_funcs_x = [CubicSpline(ts, tr_oppo[j, 0, :]) for j in range(0, M)]
+    o_funcs_y = [CubicSpline(ts, tr_oppo[j, 1, :]) for j in range(0, M)]
+    o_funcs_t = [CubicSpline(ts, tr_oppo[j, 2, :]) for j in range(0, M)]
+    p_funcs_x = [CubicSpline(ts, tr_pedes[j, 0, :]) for j in range(0, M)]
+    p_funcs_y = [CubicSpline(ts, tr_pedes[j, 1, :]) for j in range(0, M)]
+    p_funcs_t = [CubicSpline(ts, tr_pedes[j, 2, :]) for j in range(0, M)]
+
+    x_lim = [-3*l, 3*l]
+    y_lim = [-3*l, 3*l]
+
+    gray = (102/255, 102/255, 102/255)
+    light_gray = (230/255, 230/255, 230/255)
+
+    # Draw the environment
+
+    for i in [-1, 1]:
+
+        for r in np.arange(-0.9, 1, 0.1):
+            plt.plot([r*l, r*l], [1.1*i*l, 1.4*i*l], color=gray, linewidth=2, zorder=-20)
+            plt.plot([1.1*i*l, 1.4*i*l], [r*l, r*l], color=gray, linewidth=2, zorder=-20)
+
+        plt.plot([0, 0], [1.5*i*l, 3*i*l], color='black', linewidth=1, zorder=-20)
+        plt.plot([1.5*i*l, 3*i*l], [0, 0], color='black', linewidth=1, zorder=-20)
+
+        for j in [-1, 1]:
+            plt.plot([i*l, i*l], [j*l, 3*j*l], color='black', linewidth=2, zorder=-20)
+            plt.plot([j*l, 3*j*l], [i*l, i*l], color='black', linewidth=2, zorder=-20)
+
+            plt.plot([0.5*i*l, 0.5*i*l], [1.5*j*l, 3*j*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
+            plt.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
+
+    # Plot the trajectory of the ego vehicle (EV)
+            
+    def tf_anchor(x, y, theta):
+        xr = x - math.cos(theta) * 0.5 * veh_len + math.sin(theta) * veh_width/2
+        yr = y - math.sin(theta) * 0.5 * veh_len - math.cos(theta) * veh_width/2
+        return (xr, yr)
+
+    c_ego = plt.get_cmap('Reds')
+    c_oppo = plt.get_cmap('Blues')
+    c_pedes = plt.get_cmap('YlOrBr')
+
+    metadata = dict(title='Movie', artist='Zengjie Zhang')
+    writer = FFMpegWriter(fps=fps, metadata=metadata)
+
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    plt.xlim(x_lim)
+    plt.ylim(y_lim)
+    plt.xlabel('x position (m)', fontsize="12")
+    plt.ylabel('y position (m)', fontsize="12")
+    # plt.legend([pev, pov, ppd], ['Ego vehicle', 'Opponent vehicle', 'Pedestrian'], loc=(0.03, 0.03), fontsize="10", ncol=1)
+    plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.13)
+    fig.tight_layout()
+
+    # Plot the sampled trajectories of the obstacle vehicle (OV) 
+    with writer.saving(fig, 'intersection_mode_' + str(mode) + '.mp4', 300):
+
+        for i, t in enumerate(tau):
+        
+            pev = ax.add_patch(Rectangle(xy=tf_anchor(e_func_x(t), e_func_y(t), e_func_t(t)), angle=e_func_t(t)*180/np.pi, 
+                               width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
+                               edgecolor='red', facecolor=c_ego((i/len(tau))**1), zorder=50))
+
+            pov = [ax.add_patch(Rectangle(xy=tf_anchor(o_funcs_x[j](t), o_funcs_y[j](t), o_funcs_t[j](t)), angle=o_funcs_t[j](t)*180/np.pi, 
+                                    width=veh_len, height=veh_width, linewidth=1, linestyle='--', fill=True, 
+                                    edgecolor='black', facecolor=c_oppo((i/len(tau))**1), zorder=20-o_funcs_x[j](t)))
+                    for j in range(M)]
+            
+            ppd = [ax.add_patch(Circle(xy=tuple([p_funcs_x[j](t), p_funcs_y[j](t), p_funcs_t[j](t)]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
+                                    edgecolor='black', facecolor=c_pedes((i/len(tau))**1), zorder=20-p_funcs_x[j](t)))
+                    for j in range(M)]
+            
+            writer.grab_frame()
+            print('Writing frame ' + str(i) + ' out of ' + str(len(tau)))
+            pev.remove()
+            for j in range(M):
+                pov[j].remove()
+                ppd[j].remove() 
