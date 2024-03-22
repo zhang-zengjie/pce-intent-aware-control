@@ -74,11 +74,10 @@ class BicycleModel(NonlinearSystem):
             self.pce_coefs[0, :, 0] = x0
 
         self.update_matrices(0)
-        self.predict(0, self.N)
-        
         if self.PCE:
             self.predict_pce(0, self.N)
-
+        self.predict(0, self.N)
+        
 
     def f(self, x, u):
 
@@ -110,13 +109,13 @@ class BicycleModel(NonlinearSystem):
         return (a0, a1), (b0, b1), (e0, e1)
     
 
-    def update_measurements(self, t, u):
+    def apply_control(self, t, u):
 
         self.states[:, t + 1] = self.f(self.states[:, t], u)
         
         if self.PCE:
-            self.pce_coefs[0, :, t + 1] = self.f(self.pce_coefs[0, :, t], self.useq[:, t])
             self.predict_pce(t, t + 1)
+            self.pce_coefs[0, :, t + 1] = self.f(self.pce_coefs[0, :, t], self.useq[:, t])
     
     def update_matrices(self, t):
         self.update_lin_matrices(t)
@@ -126,7 +125,7 @@ class BicycleModel(NonlinearSystem):
 
     def update_lin_matrices(self, t):
 
-        A, B, E = get_linear_matrix(self.states[t], self.dt)
+        A, B, E = get_linear_matrix(self.states[:, t], self.dt)
         a, b, e = self.get_linear_scalar()
 
         self.Al = sum([a[i] * A[i] for i in [0, 1]])
@@ -138,7 +137,7 @@ class BicycleModel(NonlinearSystem):
 
     def update_pce_matrices(self, t):
 
-        A, B, E = get_linear_matrix(self.states[t], self.dt)
+        A, B, E = get_linear_matrix(self.states[:, t], self.dt)
 
         b_hat_0 = self.expansion[2]
         b_hat_1 = self.expansion[1]
@@ -169,6 +168,8 @@ class BicycleModel(NonlinearSystem):
 
         for t in range(t1, t2):
             self.states[:, t + 1] = self.f(self.states[:, t], self.useq[:, t])
+            if self.PCE:
+                self.pce_coefs[0, :, t1 + 1] = self.f(self.pce_coefs[0, :, t1], self.useq[:, t1])
 
     
     def predict_lin(self, t1, t2):
@@ -185,9 +186,7 @@ class BicycleModel(NonlinearSystem):
 
         for t in range(t1, t2):
 
-            self.pce_coefs[0, :, t1 + 1] = self.f(self.pce_coefs[0, :, t1], self.useq[:, t1])
-
-            for s in range(1, self.basis.L):
+            for s in range(self.basis.L):
                 self.pce_coefs[s, :, t + 1] = self.pce_coefs[s, :, t] + sum([self.Ap[s][j] @ self.pce_coefs[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
                 for r in range(self.n):
                     if math.isnan(self.pce_coefs[s, r, t + 1]): 
