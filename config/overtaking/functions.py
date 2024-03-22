@@ -41,11 +41,11 @@ def get_intension(N, mode=1):
 
     if mode_list[mode] == 'switch_lane':  # That the OV is trying to switch to the fast lane
         gamma = np.array([0.005 * math.sin(i*6.28/(N-1)) for i in range(N)])
-        a = np.zeros([N, ])
+        a = np.linspace(0, 0, N)
 
     elif mode_list[mode] == 'constant_speed':  # That the OV is trying to slow down (intention aware)
         gamma = np.linspace(0, 0, N)
-        a = np.linspace(0, 0, N)
+        a = np.linspace(0, -1, N)
 
     elif mode_list[mode] == 'speed_up':   # That the OV is trying to speed_up (adversarial action)
         gamma = np.linspace(0, 0, N)
@@ -97,9 +97,9 @@ def gen_pce_specs(B, N, v_lim, sys_id):
     phi_neg_belief = neg_mu_belief.eventually(0, N)
 
 
-    # phi = (phi_neg_belief | mu_overtake.always(0, 1).eventually(0, N-1)) & mu_safe.always(0, N)
+    phi = (phi_neg_belief | mu_overtake.always(0, 1).eventually(0, N-1)) & mu_safe.always(0, N)
     
-    phi = mu_safe.always(0, N)
+    # phi = mu_safe.always(0, N)
 
     return phi
 

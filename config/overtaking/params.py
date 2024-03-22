@@ -9,7 +9,7 @@ N = 15      # The control horizon
 M = 100
 R = np.array([[1e4, 0], [0, 1e-6]])
 
-mode = 0    # Select intention mode: 
+mode = 2    # Select intention mode: 
             # 0 for switching-lane OV 
             # 1 for constant-speed OV
             # 2 for speeding-up OV
@@ -24,7 +24,7 @@ B = gen_bases(l)
 
 v0 = 10
 # Initial position of the ego vehicle (EV)
-e0 = np.array([0, lanes['fast'], 0, v0*1.33])
+e0 = np.array([0, lanes['fast'], 0, v0*1.2])
 # Initial position of the obstacle vehicle (OV)            
 o0 = np.array([2*v0, lanes['slow'], 0, v0])
 
