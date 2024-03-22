@@ -62,7 +62,7 @@ class PCEMICPSolver(STLSolver):
         self.syses = syses
         ego = syses["ego"]
         sys = LinearAffineSystem(ego.Al, ego.Bl, ego.Cl, ego.Dl, ego.El)
-        super().__init__(spec, sys, ego.x0, T, verbose)
+        super().__init__(spec, sys, ego.states[0], T, verbose)
 
         self.M = float(M)
         self.presolve = presolve
@@ -83,17 +83,6 @@ class PCEMICPSolver(STLSolver):
             print("Setting up optimization problem...")
             st = time.time()  # for computing setup time
 
-        self.predict = {}
-        for name, sys in self.syses.items():
-            if name != "ego":
-                self.predict[name] = sys.predict_pce(self.T - 1)
-        '''
-                if step == 0:
-                    self.history[name] = sys.predict_pce(0)
-                else:
-                    self.history[name] = np.stack((self.history[name], sys.predict_pce(0)))
-                assert self.history[name].shape[0] == step + 1
-        '''
 
         # Create optimization variables
 
@@ -101,12 +90,13 @@ class PCEMICPSolver(STLSolver):
         self.u = self.model.addMVar((self.sys.m, self.T), lb=-float('inf'), name='u')
         self.rho = self.model.addMVar(1, name="rho", lb=0.0)  # lb sets minimum robustness
 
-        # Add cost and constraints to the optimization problem
-        self.AddDynamicsConstraints()
-
         self.AddSTLConstraints()
         # self.AddRobustnessConstraint()
 
+        self.AddDynamicsConstraints(0)
+        # Add cost and constraints to the optimization problem        
+
+        self.AddQuadraticCost(ego.R)
         if robustness_cost:
             self.AddRobustnessCost()
         
@@ -132,7 +122,7 @@ class PCEMICPSolver(STLSolver):
         print(type(self.cost))
 
     def AddRobustnessCost(self):
-        self.cost -= 1 * self.rho
+        self.cost -= (1 * self.rho)[0]
 
     def AddRobustnessConstraint(self, rho_min=0.0):
         self.model.addConstr(self.rho >= rho_min)
@@ -166,13 +156,26 @@ class PCEMICPSolver(STLSolver):
 
         return (x, u, rho, self.model.Runtime)
 
-    def AddDynamicsConstraints(self):
-        # Initial condition
-        self.model.addConstr( self.x[:,0] == self.x0 )
+
+    def AddDynamicsConstraints(self, t_curr):
+
+        self.model.update()
+        ExistingConstrs = self.model.getConstrs()
+
+        for t in range(t_curr + 1):
+            self.model.addConstr( self.x[:,t] == self.syses['ego'].states[:,t])
 
         # Dynamics
-        for t in range(self.T - 1):
+        for t in range(t_curr, self.T - 1):
             self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys.E )
+        
+        self.model.update()
+        self.DynamicsConstrs = self.model.getConstrs()[len(ExistingConstrs):]
+    
+
+    def RemoveDynamicsConstraints(self):
+        self.model.remove(self.DynamicsConstrs)
+
 
     def AddSTLConstraints(self):
         """
@@ -186,9 +189,16 @@ class PCEMICPSolver(STLSolver):
         # Recursively traverse the tree defined by the specification
         # to add binary variables and constraints that ensure that
         # rho is the robustness value
+
+        self.model.update()
+        ExistingConstrs = self.model.getConstrs()
+        
         z_spec = self.model.addMVar(1, vtype=GRB.CONTINUOUS)
         self.AddSubformulaConstraints(self.spec, z_spec, 0)
         self.model.addConstr(z_spec == 1)
+        self.model.update()
+        self.STLConstrs = self.model.getConstrs()[len(ExistingConstrs):]
+    
 
     def AddSubformulaConstraints(self, formula, z, t):
         """
@@ -225,7 +235,7 @@ class PCEMICPSolver(STLSolver):
             if formula.name == "ego":
                 self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] - formula.b + (1 - z) * self.M >= self.rho)    
             else:
-                self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.predict[formula.name][:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
+                self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.syses[formula.name].pce_coefs[:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
 
             # Force z to be binary
             b = self.model.addMVar(1, vtype=GRB.BINARY)
