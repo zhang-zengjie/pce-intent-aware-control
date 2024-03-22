@@ -24,6 +24,11 @@ a2 = np.array([0, 1, 0, 0])
 a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
+def tf_anchor(x, y, theta):
+    xr = x - math.cos(theta) * veh_len/2 + math.sin(theta) * veh_width/2
+    yr = y - math.sin(theta) * veh_len/2 - math.cos(theta) * veh_width/2
+    return (xr, yr)
+
 def get_intentions(T):
 
     gamma1 = np.linspace(0, 0, T)
@@ -196,11 +201,6 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
             plt.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
 
     # Plot the trajectory of the ego vehicle (EV)
-            
-    def tf_anchor(x, y, theta):
-        xr = x - math.cos(theta) * veh_len + math.sin(theta) * veh_width/2
-        yr = y - math.sin(theta) * veh_len - math.cos(theta) * veh_width/2
-        return (xr, yr)
 
     c_ego = plt.get_cmap('Reds')
     for i in range(0, T):
@@ -285,11 +285,6 @@ def record(tr_ego, tr_oppo, tr_pedes, mode, Ts=0.5, fps=12):
             plt.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
 
     # Plot the trajectory of the ego vehicle (EV)
-            
-    def tf_anchor(x, y, theta):
-        xr = x - math.cos(theta) * 0.5 * veh_len + math.sin(theta) * veh_width/2
-        yr = y - math.sin(theta) * 0.5 * veh_len - math.cos(theta) * veh_width/2
-        return (xr, yr)
 
     c_ego = plt.get_cmap('Reds')
     c_oppo = plt.get_cmap('Blues')
