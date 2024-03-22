@@ -25,7 +25,7 @@ legend_loc_dict = {'switch_lane': (0.74, 0.15),
                     'speed_up': (0.74, 0.65)}
 
 eps = 0.05          # Probability threshold
-d_safe_x = 10
+d_safe_x = 5
 d_safe_y = 2
 
 # Coefficients of the predicates
@@ -97,9 +97,9 @@ def gen_pce_specs(B, N, v_lim, sys_id):
     phi_neg_belief = neg_mu_belief.eventually(0, N)
 
 
-    phi = (phi_neg_belief | mu_overtake.always(0, 3).eventually(0, N-3)) & mu_safe.always(0, N)
-
-    # phi = mu_safe.always(0, N)
+    # phi = (phi_neg_belief | mu_overtake.always(0, 1).eventually(0, N-1)) & mu_safe.always(0, N)
+    
+    phi = mu_safe.always(0, N)
 
     return phi
 
