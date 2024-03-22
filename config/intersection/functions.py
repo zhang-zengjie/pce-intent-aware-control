@@ -219,8 +219,8 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
 
     for j in range(M):
         
-        pov = ax.add_patch(Rectangle(xy=tf_anchor(*tr_oppo[j, :3, cursor]), angle=tr_oppo[j, 2, cursor]*180/np.pi, 
-                                width=4, height=2, linewidth=1, linestyle='--', fill=True, 
+        pov = ax.add_patch(Rectangle(xy=tf_anchor(*(tr_oppo[j, :3, cursor]+np.array([veh_len, 0, 0]))), angle=tr_oppo[j, 2, cursor]*180/np.pi, 
+                                width=veh_len, height=veh_width, linewidth=1, linestyle='--', fill=True, 
                                 edgecolor='black', facecolor=c_oppo((cursor/T)**4), zorder=20-tr_oppo[j, 0, cursor]))
 
         ppd = ax.add_patch(Circle(xy=tuple(tr_pedes[j, :2, cursor]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
