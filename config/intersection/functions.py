@@ -287,8 +287,8 @@ def record(tr_ego, tr_oppo, tr_pedes, mode, Ts=0.5, fps=12):
     # Plot the trajectory of the ego vehicle (EV)
             
     def tf_anchor(x, y, theta):
-        xr = x - math.cos(theta) * 0.5 * veh_len + math.sin(theta) * veh_width/2
-        yr = y - math.sin(theta) * 0.5 * veh_len - math.cos(theta) * veh_width/2
+        xr = x + math.sin(theta) * veh_width/2
+        yr = y - math.cos(theta) * veh_width/2
         return (xr, yr)
 
     c_ego = plt.get_cmap('Reds')

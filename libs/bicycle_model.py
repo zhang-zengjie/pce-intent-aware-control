@@ -3,8 +3,8 @@ import numpy as np
 import math
 
 
-def get_linear_matrix(x0, delta_t):
-    theta0, v0 = x0[2], x0[3]
+def get_linear_matrix(x_curr, delta_t):
+    theta0, v0 = x_curr[2], x_curr[3]
     gamma0 = 0
     
     A0 = [[0, 0, - v0 * math.sin(theta0 + gamma0), math.cos(theta0 + gamma0)],
@@ -36,7 +36,7 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, delta_t, intent_gain=1, intent_offset=0, pce=False, Q=None, R=None, useq=None, basis=None, name=None, color=None):
+    def __init__(self, delta_t, x0, param, N, intent_gain=1, intent_offset=0, pce=False, Q=None, R=None, useq=None, basis=None, name=None, color=None):
 
         self.n = 4
         self.m = 2
@@ -46,18 +46,14 @@ class BicycleModel(NonlinearSystem):
 
         self.Q = Q
         self.R = R
-
-        self.delta_t = delta_t
-        self.color = color
-        self.param = None
-        self.PCE = pce
-
-        if self.PCE:
-            self.basis = basis
-            self.x0_pce = None
-
+        self.N = N
         self.intent_gain = intent_gain
         self.intent_offset = intent_offset
+
+        self.dt = delta_t
+        self.color = color
+        self.param = param
+        self.PCE = pce
 
         # Param list: bias (delta), length (l), intent (iota)
         self.fn = [
@@ -66,12 +62,27 @@ class BicycleModel(NonlinearSystem):
             lambda z: z[2]              # iota for B0
         ]
 
-        self.x0 = None
+        if self.PCE:
+            self.basis = basis
+            self.expansion = self.basis.generate_coefficients_multiple(self.fn)
+
+        self.states = np.zeros([self.n, self.N + 1])
+        self.states[:, 0] = x0
+
+        if self.PCE:
+            self.pce_coefs = np.zeros([self.basis.L, self.n, self.N + 1])
+            self.pce_coefs[0, :, 0] = x0
+
+        self.update_matrices(0)
+        self.predict(0, self.N)
+        
+        if self.PCE:
+            self.predict_pce(0, self.N)
 
 
     def f(self, x, u):
 
-        delta_t = self.delta_t
+        delta_t = self.dt
         delta, l, intent = self.param
 
         xx, yy, theta, v = x[0], x[1], x[2], x[3]
@@ -98,25 +109,24 @@ class BicycleModel(NonlinearSystem):
 
         return (a0, a1), (b0, b1), (e0, e1)
     
-    def update_initial(self, x0):
-        self.x0 = x0
 
-    def update_initial_pce(self, x0_pce):
-        self.x0_pce = x0_pce
+    def update_measurements(self, t, u):
 
-    def update_param(self, param):
-
-        self.param = param
+        self.states[:, t + 1] = self.f(self.states[:, t], u)
+        
+        if self.PCE:
+            self.pce_coefs[0, :, t + 1] = self.f(self.pce_coefs[0, :, t], self.useq[:, t])
+            self.predict_pce(t, t + 1)
     
-    def update_matrices(self):
-        self.update_lin_matrices()
+    def update_matrices(self, t):
+        self.update_lin_matrices(t)
 
         if self.PCE:
-            self.update_pce_matrices()
+            self.update_pce_matrices(t)
 
-    def update_lin_matrices(self):
+    def update_lin_matrices(self, t):
 
-        A, B, E = get_linear_matrix(self.x0, self.delta_t)
+        A, B, E = get_linear_matrix(self.states[t], self.dt)
         a, b, e = self.get_linear_scalar()
 
         self.Al = sum([a[i] * A[i] for i in [0, 1]])
@@ -126,15 +136,13 @@ class BicycleModel(NonlinearSystem):
         self.El = sum([e[i] * E[i] for i in [0, 1]])
 
 
-    def update_pce_matrices(self):
+    def update_pce_matrices(self, t):
 
-        A, B, E = get_linear_matrix(self.x0, self.delta_t)
+        A, B, E = get_linear_matrix(self.states[t], self.dt)
 
-        coef = self.basis.generate_coefficients_multiple(self.fn)
-
-        b_hat_0 = coef[2]
-        b_hat_1 = coef[1]
-        e_hat_1 = coef[0]
+        b_hat_0 = self.expansion[2]
+        b_hat_1 = self.expansion[1]
+        e_hat_1 = self.expansion[0]
 
         a_hat_0 = np.zeros(b_hat_1.shape)
         a_hat_1 = np.zeros(b_hat_1.shape)
@@ -155,46 +163,35 @@ class BicycleModel(NonlinearSystem):
         self.Ep = np.array([sum([e_hat[i][s] * E[i] for i in [0, 1]]) for s in range(self.basis.L)])
         # self.Ep = np.array([e_hat[s] * E for s in range(self.basis.L)])
 
-    def predict(self, N):
+    def predict(self, t1, t2):
 
-        assert self.useq.shape[1] >= N
+        assert self.useq.shape[1] >= t2
 
-        states = np.zeros([self.n, N + 1])
-        states[:, 0] = self.x0
-        for t in range(N):
-            states[:, t + 1] = self.f(states[:, t], self.useq[:, t])
+        for t in range(t1, t2):
+            self.states[:, t + 1] = self.f(self.states[:, t], self.useq[:, t])
 
-        return states
-
-    def predict_lin(self, N):
+    
+    def predict_lin(self, t1, t2):
         
-        assert self.useq.shape[1] >= N
+        assert self.useq.shape[1] >= t2
 
-        states = np.zeros([self.n, N + 1])
-        states[:, 0] = self.x0
-        for t in range(N):
-            states[:, t + 1] = states[:, t] + self.Al @ states[:, t] + self.Bl @ self.useq[:, t] + self.El
+        for t in range(t1, t2):
+            self.states[:, t + 1] = self.states[:, t] + self.Al @ self.states[:, t] + self.Bl @ self.useq[:, t] + self.El
 
-        return states
-        
-    def predict_pce(self, N):
+    
+    def predict_pce(self, t1, t2):
 
-        assert self.useq.shape[1] >= N
-        assert N >= 0
-        states = np.zeros([self.basis.L, self.n, N + 1])
+        assert self.useq.shape[1] >= t2
 
-        # Initial condition
-        states[:, :, 0] = self.x0_pce
-        # Dynamics
-        
-        if N > 0:
-            for t in range(N):
-                for s in range(self.basis.L):
-                    states[s, :, t + 1] = states[s, :, t] + sum([self.Ap[s][j] @ states[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
-                    for r in range(self.n):
-                        if math.isnan(states[s, r, t + 1]): 
-                            states[s, r, t + 1] = 0
-        return states
+        for t in range(t1, t2):
+
+            self.pce_coefs[0, :, t1 + 1] = self.f(self.pce_coefs[0, :, t1], self.useq[:, t1])
+
+            for s in range(1, self.basis.L):
+                self.pce_coefs[s, :, t + 1] = self.pce_coefs[s, :, t] + sum([self.Ap[s][j] @ self.pce_coefs[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
+                for r in range(self.n):
+                    if math.isnan(self.pce_coefs[s, r, t + 1]): 
+                        self.pce_coefs[s, r, t + 1] = 0
 
 
 class LinearAffineSystem(LinearSystem):

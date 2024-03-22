@@ -9,7 +9,7 @@ N = 15      # The control horizon
 M = 100
 R = np.array([[1e4, 0], [0, 1e-2]])
 
-mode = 2    # Select intention mode: 
+mode = 0    # Select intention mode: 
             # 0 for switching-lane OV 
             # 1 for constant-speed OV
             # 2 for speeding-up OV
@@ -22,14 +22,12 @@ B = gen_bases(l)
 
 # Generate the PCE instance and the specification
 
-ego = BicycleModel(Ts, name='ego')                  # Dynamic model of the ego vehicle (EV)
-oppo = BicycleModel(Ts, useq=v, basis=B, pce=True, name='oppo')     # Dynamic model of the obstacle vehicle (OV)
-
-ego.update_param(np.array([0, l, 1]))
-oppo.update_param(np.array([0, l, 1]))
-
 v0 = 10
 # Initial position of the ego vehicle (EV)
 e0 = np.array([0, lanes['fast'], 0, v0*1.33])
 # Initial position of the obstacle vehicle (OV)            
-o0 = np.array([2*v0, lanes['slow'], 0, v0])    
+o0 = np.array([2*v0, lanes['slow'], 0, v0])
+
+ego = BicycleModel(Ts, x0=e0, param=[0, l, 1], N=N, useq=np.zeros(v.shape), R=R, name='ego')                  # Dynamic model of the ego vehicle (EV)
+oppo = BicycleModel(Ts, x0=o0, param=[0, l, 1], N=N, useq=v, basis=B, pce=True, name='oppo')     # Dynamic model of the obstacle vehicle (OV)
+
