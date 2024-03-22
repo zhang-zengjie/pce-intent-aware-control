@@ -7,7 +7,7 @@ Ts = 1    # The discrete sampling time Delta_t
 l = 4       # The baseline value of the vehicle length
 N = 15      # The control horizon
 M = 100
-R = np.array([[1e4, 0], [0, 1e-4]])
+R = np.array([[1e4, 0], [0, 1e-6]])
 
 mode = 0    # Select intention mode: 
             # 0 for switching-lane OV 
@@ -24,7 +24,7 @@ B = gen_bases(l)
 
 v0 = 10
 # Initial position of the ego vehicle (EV)
-e0 = np.array([0, lanes['fast'], 0, v0*1.1])
+e0 = np.array([0, lanes['fast'], 0, v0*1.33])
 # Initial position of the obstacle vehicle (OV)            
 o0 = np.array([2*v0, lanes['slow'], 0, v0])
 

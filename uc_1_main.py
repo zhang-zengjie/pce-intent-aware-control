@@ -31,8 +31,8 @@ for i in range(N):
 
     solver.cost = 0.0
     
-    solver.AddRobustnessCost()
-    # solver.AddRobustnessConstraint()
+    # solver.AddRobustnessCost()
+    solver.AddRobustnessConstraint()
     solver.AddQuadraticCost(i)
     x, u, rho, _ = solver.Solve()
 
