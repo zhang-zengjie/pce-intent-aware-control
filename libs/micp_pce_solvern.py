@@ -103,7 +103,7 @@ class PCEMICPSolver(STLSolver):
 
         # Add cost and constraints to the optimization problem
         self.AddDynamicsConstraints()
-        
+
         self.AddSTLConstraints()
         # self.AddRobustnessConstraint()
 

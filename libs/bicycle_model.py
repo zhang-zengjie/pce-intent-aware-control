@@ -36,13 +36,16 @@ def get_linear_matrix(x0, delta_t):
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, delta_t, intent_gain=1, intent_offset=0, pce=False, useq=None, basis=None, name=None, color=None):
+    def __init__(self, delta_t, intent_gain=1, intent_offset=0, pce=False, Q=None, R=None, useq=None, basis=None, name=None, color=None):
 
         self.n = 4
         self.m = 2
         self.p = 4
         self.name = name
         self.useq = useq
+
+        self.Q = Q
+        self.R = R
 
         self.delta_t = delta_t
         self.color = color
