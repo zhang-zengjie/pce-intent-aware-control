@@ -3,19 +3,21 @@ from libs.pce_milp_solver import PCEMILPSolver
 from config.overtaking.params import initialize
 
 # First of first, choose the mode
-intent = 1    # Select the certain intention mode of OV: 
+intent = 2    # Select the certain intention mode of OV: 
             # 0 for switching-lane
             # 1 for slowing-down
             # 2 for speeding-up
 N = 15      # Control horizon
 
 # Initialize system and specification
-sys, phi = initialize(intent, N)
-            # sys: the dictionary of agents
+agents, phi = initialize(intent, N)
+            # agents: the dictionary of agents (vehicles)
+                # agents['ego']: ego vehicle (EV)
+                # agents['oppo']: opponent vehicle (OV)
             # phi: the task specification
 
 # Load the solver
-solver = PCEMILPSolver(phi, sys, N)
+solver = PCEMILPSolver(phi, agents, N)
 u_opt = np.zeros((2, ))
 
 for i in range(N):

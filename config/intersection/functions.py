@@ -26,15 +26,14 @@ a4 = np.array([0, 0, 0, 1])
 
 def get_intentions(T):
 
-    gamma1 = np.linspace(0, 0, T)
-    # a1 = np.linspace(-0.5, -0.5, T)
-    a1 = - 0.2 * np.ones((T, ))
-    u1 = np.array([gamma1, a1])
+    # gamma1 = np.zeros((T, ))
+    # a1 = - 0.2 * np.ones((T, ))
+    # u1 = np.array([gamma1, a1])
 
-    gamma2 = np.linspace(0, 0, T)
-    a2 = np.linspace(0, 0, T)
-    u2 = np.array([gamma2, a2])
+    u1 = np.zeros((2, T))
+    u2 = np.zeros((2, T))
 
+    u1[1] -= 0.2
     return u1, u2
 
 def get_initials():
@@ -134,8 +133,8 @@ def get_spec(sys, N, mode):
         phi = phi_ego
     else:
         phi_oppo = safety_specs(sys['oppo'].basis, N, dist=1, sys_id='oppo')
-        phi_pedes = safety_specs(sys['pedes'].basis, N, dist=2, sys_id='pedes')
-        phi = phi_ego & phi_oppo #& phi_pedes
+        phi_pedes = safety_specs(sys['pedes'].basis, N, dist=1, sys_id='pedes')
+        phi = phi_ego & phi_oppo & phi_pedes
     return phi
 
 
@@ -196,11 +195,11 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
     for i in range(0, T):
         ax.add_patch(Rectangle(xy=tf_anchor(*tr_ego[:3, i]), angle=tr_ego[2, i]*180/np.pi, 
                                width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
-                               edgecolor='red', facecolor=c_ego((i/T)**1), zorder=50))
+                               edgecolor='red', facecolor=c_ego((i/T)**1), zorder=0))
         
     pev = ax.add_patch(Rectangle(xy=tf_anchor(*tr_ego[:3, cursor]), angle=tr_ego[2, cursor]*180/np.pi, 
                                width=veh_len, height=veh_width, linewidth=1.5, fill=True,
-                               edgecolor='black', facecolor=c_ego((cursor/T)**1), zorder=50))
+                               edgecolor='black', facecolor=c_ego((cursor/T)**1), zorder=0))
         
     c_oppo = plt.get_cmap('Blues')
     c_pedes = plt.get_cmap('YlOrBr')
@@ -211,10 +210,10 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
         
         pov = ax.add_patch(Rectangle(xy=tf_anchor(*tr_oppo[j, :3, cursor]), angle=tr_oppo[j, 2, cursor]*180/np.pi, 
                                 width=4, height=2, linewidth=1, linestyle='--', fill=True, 
-                                edgecolor='black', facecolor=c_oppo((cursor/T)**4), zorder=20-tr_oppo[j, 0, cursor]))
+                                edgecolor='black', facecolor=c_oppo((cursor/T)**1), zorder=20-tr_oppo[j, 0, cursor]))
 
         ppd = ax.add_patch(Circle(xy=tuple(tr_pedes[j, :2, cursor]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
-                                edgecolor='black', facecolor=c_pedes((cursor/T)**4), zorder=20-tr_pedes[j, 0, cursor]))
+                                edgecolor='black', facecolor=c_pedes((cursor/T)**1), zorder=20-tr_pedes[j, 0, cursor]))
 
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42

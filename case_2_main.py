@@ -3,18 +3,21 @@ from libs.pce_milp_solver import PCEMILPSolver
 from config.intersection.params import initialize
 
 # First of first, choose the scenario
-scene = 1    # Select simulation scenario: 
-        # 0 for no_reaction 
-        # 1 for reaction with proposed method
+scene = 0    # Select simulation scenario: 
+        # 0 for no_awareness 
+        # 1 for intention_aware
 N = 35
 
 # Initialize system and specification
-sys, phi = initialize(scene, N)
-            # sys: the dictionary of agents
+agents, phi = initialize(scene, N)
+            # agents: the dictionary of agents
+                # agents['ego']: ego vehicle (EV)
+                # agents['oppo']: opponent vehicle (OV)
+                # agents['pedes']: pedestrians
             # phi: the task specification
 
 u_opt = np.zeros((2, ))
-solver = PCEMILPSolver(phi, sys, N)
+solver = PCEMILPSolver(phi, agents, N)
 
 for i in range(N):
 
