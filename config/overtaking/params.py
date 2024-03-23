@@ -1,5 +1,5 @@
 import numpy as np
-from config.overtaking.functions import gen_bases, get_intension, lanes
+from config.overtaking.functions import gen_bases, get_intention, lanes
 from libs.bicycle_model import BicycleModel
 
 
@@ -17,7 +17,7 @@ mode = 2    # Select intention mode:
 np.random.seed(7)
 
 # The assumed control mode of the obstacle vehicle (OV)
-v = get_intension(N, mode)
+v = get_intention(N, mode)
 B = gen_bases(l)
 
 # Generate the PCE instance and the specification

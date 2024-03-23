@@ -27,20 +27,21 @@ a4 = np.array([0, 0, 0, 1])
 def get_intentions(T):
 
     gamma1 = np.linspace(0, 0, T)
-    a1 = np.linspace(0, -0.5, T)
+    # a1 = np.linspace(-0.5, -0.5, T)
+    a1 = - 0.2 * np.ones((T, ))
     u1 = np.array([gamma1, a1])
 
     gamma2 = np.linspace(0, 0, T)
-    a2 = np.linspace(0.02, 0, T)
+    a2 = np.linspace(0, 0, T)
     u2 = np.array([gamma2, a2])
 
     return u1, u2
 
 def get_initials():
 
-    e0 = np.array([-l*2, -l/2, 0, 2])              # Initial state of the ego vehicle (EV)
-    o0 = np.array([105, l/2, math.pi, 8])             # Initial state of the obstacle vehicle (OV)
-    p0 = np.array([1.2*l, 1.2*l, math.pi, 0])        # Initial state of the pedestrian (PD)
+    e0 = np.array([-l*2, -l/2, 0, 3])              # Initial state of the ego vehicle (EV)
+    o0 = np.array([25, l/2, math.pi, 2.2])             # Initial state of the obstacle vehicle (OV)
+    p0 = np.array([1.2*l, 1.2*l, math.pi, 0.5])        # Initial state of the pedestrian (PD)
 
     return e0, o0, p0
 
@@ -81,14 +82,11 @@ def approximate(sys, tr, nodes, Q, i):
 
 def turn_specs(B, N, sys_id):
 
-    reach = B.gen_bs_predicate(a1, o, l/2 - 0.1, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(-a1, o, -l/2 - 0.1, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(a2, o, 3/2*l, epsilon=1, name=sys_id)
-
-    drive_in = B.gen_bs_predicate(a3, o, np.pi/2- 0.1, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(-a3, o, -np.pi/2- 0.1, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(a1, o, l/2 - 0.1, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(-a1, o, -l/2 - 0.1, epsilon=1, name=sys_id)
+    reach = B.gen_bs_predicate(a1, o, l/2 - l/2, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(-a1, o, -l/2 - l/2, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(a2, o, 3/2*l, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(a3, o, np.pi/2- 0.1, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(-a3, o, -np.pi/2- 0.1, epsilon=1, name=sys_id) 
 
     bet_out = B.gen_bs_predicate(a2, o, -l/2 - 0.1, epsilon=1, name=sys_id) & \
         B.gen_bs_predicate(-a2, o, l/2 - 0.1, epsilon=1, name=sys_id)
@@ -96,12 +94,9 @@ def turn_specs(B, N, sys_id):
     
     drive_out = vel_out | bet_out
 
-    if N > 4:
-        phi = reach.always(0, 3).eventually(0, N-3) & drive_out.always(0, N) 
-    elif N > 2:
-        phi = drive_in.always(0, 2).eventually(0, N-2)
-    else:
-        phi = drive_in.always(0, N)
+    #phi = r.always(0, 1).eventually(0, N-1) & drive_out.always(0, N) 
+
+    phi = reach.eventually(0, N) & drive_out.always(0, N)
 
     return phi
 
@@ -133,19 +128,14 @@ def safety_specs_multi_modal(B, N, sys_id, std, dist=4, eps=0.05):
     return phi
 
 
-def get_spec(sys, tr, samples, Q, N, i, mode):
-    phi_ego = turn_specs(sys['oppo'].basis, N-i, 'ego')
+def get_spec(sys, N, mode):
+    phi_ego = turn_specs(sys['oppo'].basis, N, 'ego')
     if mode == 0:
         phi = phi_ego
-    elif mode == 2:
-        oppo_std, pedes_std = approximate(sys, tr, samples, Q, i)
-        phi_oppo = safety_specs_multi_modal(sys['oppo'].basis, N-i, std=oppo_std, dist=8, sys_id='oppo')
-        phi_pedes = safety_specs_multi_modal(sys['pedes'].basis, N-i, std=pedes_std, dist=2, sys_id='pedes')
-        phi = phi_ego & phi_oppo & phi_pedes
     else:
-        phi_oppo = safety_specs(sys['oppo'].basis, N-i, dist=4, sys_id='oppo')
-        phi_pedes = safety_specs(sys['pedes'].basis, N-i, dist=2, sys_id='pedes')
-        phi = phi_ego & phi_oppo & phi_pedes
+        phi_oppo = safety_specs(sys['oppo'].basis, N, dist=1, sys_id='oppo')
+        phi_pedes = safety_specs(sys['pedes'].basis, N, dist=2, sys_id='pedes')
+        phi = phi_ego & phi_oppo #& phi_pedes
     return phi
 
 

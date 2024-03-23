@@ -37,7 +37,7 @@ a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
 
-def get_intension(N, mode=1):
+def get_intention(N, mode=1):
 
     if mode_list[mode] == 'switch_lane':  # That the OV is trying to switch to the fast lane
         gamma = np.array([0.005 * math.sin(i*6.28/(N-1)) for i in range(N)])
