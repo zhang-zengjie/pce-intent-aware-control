@@ -16,9 +16,9 @@ lanes = {'right': 1,
 
 mode_list = ['switch_lane', 'constant_speed', 'speed_up']
 
-x_range_dict = {'switch_lane': [-5, 205],
-                'constant_speed': [-5, 205],
-                'speed_up': [-5, 205]}
+x_range_dict = {'switch_lane': [-5, 215],
+                'constant_speed': [-5, 215],
+                'speed_up': [-5, 215]}
 
 legend_loc_dict = {'switch_lane': (0.74, 0.15),
                     'constant_speed': (0.74, 0.65),

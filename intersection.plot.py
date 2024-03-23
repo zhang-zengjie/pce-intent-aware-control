@@ -2,7 +2,7 @@ import numpy as np
 from config.intersection.params import sys, mode, N, M
 from config.intersection.functions import visualize, record
 
-tr_ego = np.load('results/case_2/x_mode_' + str(mode) + '.npy')
+tr_ego = np.load('data/intersection/x_mode_' + str(mode) + '.npy')
 
 cursors = [16, 24]
 
