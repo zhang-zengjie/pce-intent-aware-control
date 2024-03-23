@@ -3,7 +3,7 @@ import numpy as np
 import math
 
 
-def get_linear_matrix(x_curr, delta_t):
+def get_linear_matrix(x_curr, dt):
     theta0, v0 = x_curr[2], x_curr[3]
     gamma0 = 0
     
@@ -31,12 +31,12 @@ def get_linear_matrix(x_curr, delta_t):
 
     E1 = [0, 0, 0, 1]
 
-    return np.array([A0, A1]) * delta_t, np.array([B0, B1]) * delta_t, np.array([E0, E1]) * delta_t
+    return np.array([A0, A1]) * dt, np.array([B0, B1]) * dt, np.array([E0, E1]) * dt
 
 
 class BicycleModel(NonlinearSystem):
 
-    def __init__(self, delta_t, x0, param, N, intent_gain=1, intent_offset=0, pce=False, Q=None, R=None, useq=None, basis=None, name=None, color=None):
+    def __init__(self, dt, x0, param, N, intent_gain=1, intent_offset=0, pce=False, Q=None, R=None, useq=None, basis=None, name=None, color=None):
 
         self.n = 4
         self.m = 2
@@ -50,7 +50,7 @@ class BicycleModel(NonlinearSystem):
         self.intent_gain = intent_gain
         self.intent_offset = intent_offset
 
-        self.dt = delta_t
+        self.dt = dt
         self.color = color
         self.param = param
         self.PCE = pce
@@ -81,15 +81,15 @@ class BicycleModel(NonlinearSystem):
 
     def f(self, x, u):
 
-        delta_t = self.dt
+        dt = self.dt
         delta, l, intent = self.param
 
         xx, yy, theta, v = x[0], x[1], x[2], x[3]
         gamma, a = (intent + self.intent_offset) * u * self.intent_gain
-        xx += delta_t * v * math.cos(theta + gamma)
-        yy += delta_t * v * math.sin(theta + gamma)
-        theta += delta_t * v * math.sin(gamma)/l
-        v += delta_t *  (a + delta)
+        xx += dt * v * math.cos(theta + gamma)
+        yy += dt * v * math.sin(theta + gamma)
+        theta += dt * v * math.sin(gamma)/l
+        v += dt *  (a + delta)
         return np.array([xx, yy, theta, v])
     
     def g(self, x, u):
@@ -166,15 +166,17 @@ class BicycleModel(NonlinearSystem):
 
         assert self.useq.shape[1] >= t2
 
+        if self.PCE:
+            self.predict_pce(t1, t2)
+        self.predict_non_lin(t1, t2)
+
+    def predict_non_lin(self, t1, t2):
+
         for t in range(t1, t2):
             self.states[:, t + 1] = self.f(self.states[:, t], self.useq[:, t])
-            if self.PCE:
-                self.pce_coefs[0, :, t1 + 1] = self.f(self.pce_coefs[0, :, t1], self.useq[:, t1])
-
     
+
     def predict_lin(self, t1, t2):
-        
-        assert self.useq.shape[1] >= t2
 
         for t in range(t1, t2):
             self.states[:, t + 1] = self.states[:, t] + self.Al @ self.states[:, t] + self.Bl @ self.useq[:, t] + self.El
@@ -182,15 +184,15 @@ class BicycleModel(NonlinearSystem):
     
     def predict_pce(self, t1, t2):
 
-        assert self.useq.shape[1] >= t2
-
         for t in range(t1, t2):
-
             for s in range(self.basis.L):
                 self.pce_coefs[s, :, t + 1] = self.pce_coefs[s, :, t] + sum([self.Ap[s][j] @ self.pce_coefs[j, :, t] for j in range(self.n)]) + self.Bp[s] @ self.useq[:, t] + self.Ep[s]
                 for r in range(self.n):
                     if math.isnan(self.pce_coefs[s, r, t + 1]): 
                         self.pce_coefs[s, r, t + 1] = 0
+        
+        for t in range(t1, t2):
+            self.pce_coefs[0, :, t1 + 1] = self.f(self.pce_coefs[0, :, t1], self.useq[:, t1])
 
 
 class LinearAffineSystem(LinearSystem):

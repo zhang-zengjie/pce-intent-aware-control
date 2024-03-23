@@ -1,5 +1,5 @@
 import numpy as np
-from libs.micp_pce_solvern import PCEMICPSolver
+from libs.micp_pce_solver import PCEMICPSolver
 from config.intersection.params import sys, phi, N, mode
 
 
@@ -12,9 +12,9 @@ for i in range(N):
     solver.syses['oppo'].update_matrices(i)
     solver.syses['pedes'].update_matrices(i)
 
-    solver.syses['oppo'].predict_pce(i, N)
+    #solver.syses['oppo'].predict_pce(i, N)
     solver.syses['oppo'].predict(i, N)
-    solver.syses['pedes'].predict_pce(i, N)
+    #solver.syses['pedes'].predict_pce(i, N)
     solver.syses['pedes'].predict(i, N)
 
     # Solve
@@ -39,6 +39,6 @@ for i in range(N):
     solver.syses['oppo'].apply_control(i, solver.syses['oppo'].useq[:, i])
     solver.syses['pedes'].apply_control(i, solver.syses['pedes'].useq[:, i])
 
-np.save('results/case_2/x_mode_' + str(mode) + '.npy', solver.syses['ego'].states)
-np.save('results/case_2/z_oppo_mode_' + str(mode) + '.npy', solver.syses['oppo'].pce_coefs)
-np.save('results/case_2/z_pedes_mode_' + str(mode) + '.npy', solver.syses['pedes'].pce_coefs)
+np.save('data/intersection/x_mode_' + str(mode) + '.npy', solver.syses['ego'].states)
+np.save('data/intersection/z_oppo_mode_' + str(mode) + '.npy', solver.syses['oppo'].pce_coefs)
+np.save('data/intersection/z_pedes_mode_' + str(mode) + '.npy', solver.syses['pedes'].pce_coefs)
