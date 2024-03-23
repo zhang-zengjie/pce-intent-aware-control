@@ -20,7 +20,11 @@ class PCEBasis:
         self.psi = np.zeros([self.L, self.L, self.L])
 
         for s, j, i in product(range(self.L), range(self.L), range(self.L)):
-            self.psi[s][j][i] = cp.E(self.basis[s]*self.basis[j]*self.basis[i], eta)/cp.E(self.basis[s]*self.basis[s], eta)
+            num = cp.E(self.basis[s]*self.basis[s], eta)
+            if abs(num) < 1e-10:
+                self.psi[s][j][i] = 0
+            else:    
+                self.psi[s][j][i] = cp.E(self.basis[s]*self.basis[j]*self.basis[i], eta)/num
 
     def generate_coefficients_multiple(self, f):
 

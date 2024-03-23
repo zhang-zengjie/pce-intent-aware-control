@@ -1,3 +1,7 @@
+# Intent-Aware Control Facilitated by Polynomial Chaos Expansion
+
+**Author:** Zengjie Zhang (z.zhang3@tue.nl)
+
 ## Dependencies
 
 Python=3.10
@@ -11,8 +15,14 @@ Python=3.10
 - `conda install -c conda-forge importlib_metadata`
 - `conda install -c conda-forge numpoly`
 
-## Running scripts
+## Run the overtaking case
 
-- Run `compare_statistics.py` to compare PCE and Monte Carlo statistics
-- Go go `commons.py` to change variables of PCE basis and specifications
-- Run `main.py` to solve the optimizer
+- In `case_1_main.py`, choose the intent variable `intent` among `0: OV switching_lane`, `1: OV slowing down`, and `2: OV speeding up`;
+- Run `case_1_main.py` to solve the overtaking problem;
+- Run `case_1_plot.py` to visualize the result; Remember to switch the intent variable `intent` to see results in different scenarios.
+
+## Run the intersection case
+
+- In `case_2_main.py`, choose the intent variable `intent` among `0: OV switching_lane`, `1: OV slowing down`, and `2: OV speeding up`;
+- Run `case_2_main.py` to solve the overtaking problem;
+- Run `case_2_plot.py` to visualize the result; Remember to switch the intent variable `intent` to see results in different scenarios.
