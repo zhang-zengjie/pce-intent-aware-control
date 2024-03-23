@@ -196,11 +196,11 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
     for i in range(0, T):
         ax.add_patch(Rectangle(xy=tf_anchor(*tr_ego[:3, i]), angle=tr_ego[2, i]*180/np.pi, 
                                width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
-                               edgecolor='red', facecolor=c_ego((i/T)**4), zorder=50))
+                               edgecolor='red', facecolor=c_ego((i/T)**1), zorder=50))
         
     pev = ax.add_patch(Rectangle(xy=tf_anchor(*tr_ego[:3, cursor]), angle=tr_ego[2, cursor]*180/np.pi, 
                                width=veh_len, height=veh_width, linewidth=1.5, fill=True,
-                               edgecolor='black', facecolor=c_ego((cursor/T)**4), zorder=50))
+                               edgecolor='black', facecolor=c_ego((cursor/T)**1), zorder=50))
         
     c_oppo = plt.get_cmap('Blues')
     c_pedes = plt.get_cmap('YlOrBr')

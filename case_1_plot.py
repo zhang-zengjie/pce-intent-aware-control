@@ -2,22 +2,22 @@ import numpy as np
 from config.overtaking.params import initialize
 from config.overtaking.functions import visualize, record
 
-# First of first, choose the mode
-mode = 2    # Select the mode of certain intentions: 
+# First of first, choose the intent
+intent = 1    # Select the intent of certain intentions: 
             # 0 for a switching-lane OV 
             # 1 for a slowing-down OV
             # 2 for a speeding-up OV
 N = 15      # Control horizon
 
 # Initialize system and specification
-sys, _ = initialize(mode, N)
+sys, _ = initialize(intent, N)
             # sys: the dictionary of agents
 
 # Load the data of the ego agent
-xx = np.load('data/overtaking/x_mode_' + str(mode) + '.npy')
+xx = np.load('data/overtaking/x_intent_' + str(intent) + '.npy')
 
 # Perform 100 times Monte Carlo sampling for the opponent agent
-M = 100
+M = 100     # Number of Monte Carlo runs
 zz_s = np.zeros([sys['oppo'].n, N + 1, M])
 samples = sys['oppo'].basis.eta.sample([M, ])
 for j in range(M):
@@ -27,8 +27,8 @@ for j in range(M):
 
 if True:
     # Visualize the result
-    visualize(xx[:, :N-1], zz_s[:, :N-1, :], mode)
+    visualize(xx[:, :N-1], zz_s[:, :N-1, :], intent)
 
 if False:
     # Record the video
-    record(xx[:, :10], zz_s[:, :10, :], mode)
+    record(xx[:, :10], zz_s[:, :10, :], intent)

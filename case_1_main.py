@@ -1,31 +1,31 @@
 import numpy as np
-from libs.micp_pce_solver import PCEMICPSolver
+from libs.pce_milp_solver import PCEMILPSolver
 from config.overtaking.params import initialize
 
 # First of first, choose the mode
-mode = 2    # Select intention mode: 
-            # 0 for switching-lane OV 
-            # 1 for constant-speed OV
-            # 2 for speeding-up OV
+intent = 1    # Select the certain intention mode of OV: 
+            # 0 for switching-lane
+            # 1 for slowing-down
+            # 2 for speeding-up
 N = 15      # Control horizon
 
 # Initialize system and specification
-sys, phi = initialize(mode, N)
+sys, phi = initialize(intent, N)
             # sys: the dictionary of agents
             # phi: the task specification
 
 # Load the solver
-solver = PCEMICPSolver(phi, sys, N)
+solver = PCEMILPSolver(phi, sys, N)
 u_opt = np.zeros((2, ))
 
 for i in range(N):
     
     # Update the linearized matrices
-    solver.syses['ego'].update_matrices(i)
-    solver.syses['oppo'].update_matrices(i)
+    solver.agents['ego'].update_matrices(i)
+    solver.agents['oppo'].update_matrices(i)
 
     # Update the linearized prediction
-    solver.syses['oppo'].predict(i, N)
+    solver.agents['oppo'].predict(i, N)
     
     # Update the dynamics constraints
     solver.AddDynamicsConstraints(i)
@@ -49,9 +49,9 @@ for i in range(N):
         u_opt = u[:, i]
 
     # Apply the control input
-    solver.syses['ego'].apply_control(i, u_opt)
-    solver.syses['oppo'].apply_control(i, solver.syses['oppo'].useq[:, i])
+    solver.agents['ego'].apply_control(i, u_opt)
+    solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
 
 # Save data
-np.save('data/overtaking/x_mode_' + str(mode) + '.npy', solver.syses['ego'].states)
-np.save('data/overtaking/z_mode_' + str(mode) + '.npy', solver.syses['oppo'].pce_coefs)
+np.save('data/overtaking/x_intent_' + str(intent) + '.npy', solver.agents['ego'].states)
+np.save('data/overtaking/z_intent_' + str(intent) + '.npy', solver.agents['oppo'].pce_coefs)

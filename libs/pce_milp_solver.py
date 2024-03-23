@@ -1,7 +1,5 @@
 import numpy as np
 import time
-import numpoly
-
 from stlpy.solvers.base import STLSolver
 from stlpy.STL import LinearPredicate, NonlinearPredicate
 from libs.bicycle_model import LinearAffineSystem
@@ -10,7 +8,7 @@ import gurobipy as gp
 from gurobipy import GRB
 
 
-class PCEMICPSolver(STLSolver):
+class PCEMILPSolver(STLSolver):
     
     """
     Given an :class:`.STLFormula` :math:`\\varphi` and a :class:`.LinearSystem`,
@@ -28,38 +26,28 @@ class PCEMICPSolver(STLSolver):
 
         & \\rho^{\\varphi}(x_0,x_1,\dots,x_T, hat{z}_0, hat{z}_1, \dots, \hat{z}_T) \geq 0
 
-    with Gurobi using mixed-integer convex programming. This gives a globally optimal
-    solution, but may be computationally expensive for long and complex specifications.
+    with Gurobi using mixed-integer convex programming. 
 
     .. note::
 
-        This class implements the algorithm described in
-
-        Belta C, et al.
-        *Formal methods for control synthesis: an optimization perspective*.
-        Annual Review of Control, Robotics, and Autonomous Systems, 2019.
-        https://dx.doi.org/10.1146/annurev-control-053018-023717.
+        This file is modified based upon "stlpy/solvers/gurobi/gurobi_micp.py"
 
     :param spec:            An :class:`.STLFormula` describing the specification.
-    :param ego:           A :class:`.BicycleModel` describing the deterministic system dynamics.
-    :param oppo:           A :class:`.BicycleModel` describing the PCE system dynamics.
-    :param v:               A numpy array fixing the assumed control input of the PCE system.
-    :param T:               A positive integer fixing the total number of timesteps :math:`T`.
+    :param agents:          A dictionary containing :class:`.BicycleModel` describing agent models.
+    :param T:               A positive integer :math:`T` describing control horizon.
     :param M:               (optional) A large positive scalar used to rewrite ``min`` and ``max`` as
                             mixed-integer constraints. Default is ``1000``.
-    :param robustness_cost: (optional) Boolean flag for adding a linear cost to maximize
-                            the robustness measure. Default is ``True``.
     :param presolve:        (optional) A boolean indicating whether to use Gurobi's
                             presolve routines. Default is ``True``.
     :param verbose:         (optional) A boolean indicating whether to print detailed
                             solver info. Default is ``True``.
     """
 
-    def __init__(self, spec, syses, T, M=1000, presolve=True, verbose=True):
+    def __init__(self, spec, agents, T, M=1000, presolve=True, verbose=True):
         assert M > 0, "M should be a (large) positive scalar"
         
-        self.syses = syses
-        ego = syses["ego"]
+        self.agents = agents
+        ego = agents["ego"]
         sys = LinearAffineSystem(ego.Al, ego.Bl, ego.Cl, ego.Dl, ego.El)
         super().__init__(spec, sys, ego.states[0], T, verbose)
 
@@ -76,6 +64,7 @@ class PCEMICPSolver(STLSolver):
             self.model.setParam('OutputFlag', 0)
 
         if self.verbose:
+            print("---------------------------------------------------------")
             print("Setting up optimization variables (only done for once)...")
             st = time.time()  # for computing setup time
 
@@ -86,14 +75,17 @@ class PCEMICPSolver(STLSolver):
 
         if self.verbose:
             print(f"Optimization variables ready after {time.time() - st} seconds.")
+            print("---------------------------------------------------------")
             print("Setting up STL constraints (only done for once)... ")
             print("This process may take up to 1-2 minutes, be patient...")
             st = time.time()
 
+        # Set up STL constraints
         self.AddSTLConstraints()
         
         if self.verbose:
             print(f"STL constraints ready after {time.time() - st} seconds.")
+            print("---------------------------------------------------------")
         
         if self.verbose:
             print(f"Initial setup complete. Ready for solving...")
@@ -110,13 +102,12 @@ class PCEMICPSolver(STLSolver):
             self.model.addConstr(self.x[:, t] <= x_max)
 
     def AddQuadraticCost(self, t_curr):
-        R = self.syses['ego'].R
-        
+
         if t_curr < self.T:
             for t in range(t_curr, self.T):
-                self.cost += self.u[:, t] @ R @ self.u[:, t]
+                self.cost += self.u[:, t] @ self.agents['ego'].R @ self.u[:, t]
         else:
-            self.cost += self.u[:, t_curr] @ R @ self.u[:, t_curr]
+            self.cost += self.u[:, t_curr] @ self.agents['ego'].R @ self.u[:, t_curr]
 
         print(type(self.cost))
 
@@ -161,18 +152,21 @@ class PCEMICPSolver(STLSolver):
         self.model.update()
         ExistingConstrs = self.model.getConstrs()
 
+        # History
         for t in range(t_curr + 1):
-            self.model.addConstr( self.x[:,t] == self.syses['ego'].states[:,t])
+            self.model.addConstr( self.x[:,t] == self.agents['ego'].states[:,t])
 
         # Dynamics
         for t in range(t_curr, self.T - 1):
             self.model.addConstr( self.x[:,t+1] == self.x[:,t] + self.sys.A @ self.x[:,t] + self.sys.B @ self.u[:,t] + self.sys.E )
         
         self.model.update()
+        # Get all history and dynamic constraints
         self.DynamicsConstrs = self.model.getConstrs()[len(ExistingConstrs):]
     
 
     def RemoveDynamicsConstraints(self):
+        # Remove all existing history and dynamic constraints
         self.model.remove(self.DynamicsConstrs)
         self.model.update()
         self.DynamicsConstrs = []
@@ -240,7 +234,7 @@ class PCEMICPSolver(STLSolver):
             if formula.name == "ego":
                 self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] - formula.b + (1 - z) * self.M >= self.rho)    
             else:
-                self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.syses[formula.name].pce_coefs[:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
+                self.model.addConstr(formula.a.T[:, :self.sys.n] @ self.x[:, t] + formula.a.T[:, self.sys.n:] @ self.agents[formula.name].pce_coefs[:, :, t].reshape(-1, 1) - formula.b + (1 - z) * self.M >= self.rho)
 
             # Force z to be binary
             b = self.model.addMVar(1, vtype=GRB.BINARY)
