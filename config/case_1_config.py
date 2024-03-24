@@ -147,9 +147,11 @@ def visualize(agents, xe, xo, mode):
                                          angle=xo[j, 2, i]/3.14*180, linewidth=1, linestyle='dotted', edgecolor=(0, 0, 51*4/255), 
                                          fill=True, facecolor=c_oppo(i*0.8/T), zorder=10+i*M+xo[j, 1, i]))
 
+
         pev = ax.add_patch(Rectangle(xy=(tf(*xe[:3, i], **_vs('ego'))), **_vs('ego'), 
                                      angle=xe[2, i]/3.14*180, linewidth=1, linestyle='dotted', edgecolor=(51*4/255, 0, 0), 
                                      fill=True, facecolor=c_ego(i*0.8/T), zorder=10+M*T+i*M+xe[1, i]))
+        
         
     i = T - 1
 
@@ -215,24 +217,32 @@ def record(agents, xe, xo, mode, fps=12):
 
         # Plot the trajectory of the ego vehicle (EV)
         for i, t in enumerate(tau):
-            pov = [ax.add_patch(Rectangle(xy=(tf(fz[0][j](t), fz[1][j](t), fz[2][j](t), **_vs('oppo'))), **_vs('oppo'), angle=fz[2][j](t)/3.14*180, linewidth=1.5, linestyle='dotted',
-                                    edgecolor=(0, 0, 0.2), fill=True, facecolor=c_oppo(i*0.8/TT), zorder=10+i*M+fz[1][j](t)))
+            pov = [ax.add_patch(Rectangle(xy=(tf(fz[0][j](t), fz[1][j](t), fz[2][j](t), **_vs('oppo'))), **_vs('oppo'), angle=fz[2][j](t)/3.14*180, linewidth=2, linestyle='dotted',
+                                    edgecolor=(0, 0, 0.2), fill=True, facecolor=c_oppo(i*0.8/TT), zorder=10+i*M+fz[0][j](t)))
+                    for j in range(M)]
+            tov = [ax.text(fz[0][j](t), fz[1][j](t), 'OV         ', rotation=fz[2][j](t)*180/np.pi, fontsize=30,
+                           horizontalalignment='center', verticalalignment='center', zorder=10+i*M+fz[0][j](t)+1e-6)
                     for j in range(M)]
 
-            pev = ax.add_patch(Rectangle(xy=(tf(fx[0](t), fx[1](t), fx[2](t), **_vs('ego'))), **_vs('ego'), angle=fx[2](t)/3.14*180, linewidth=1.5, linestyle='dotted',
+            pev = ax.add_patch(Rectangle(xy=(tf(fx[0](t), fx[1](t), fx[2](t), **_vs('ego'))), **_vs('ego'), angle=fx[2](t)/3.14*180, linewidth=2, linestyle='dotted',
                                     edgecolor=(0.2, 0, 0), fill=True, facecolor=c_ego(i*0.8/TT), zorder=10+M*TT+i*M+fx[1](t)))
-            
+            tev = ax.text(fx[0](t), fx[1](t), 'EV         ', rotation=fx[2](t)*180/np.pi, fontsize=30,
+                          horizontalalignment='center', verticalalignment='center', zorder=10+M*TT+i*M+fx[1](t)+1)
+
             if mode == 0:
-                plt.xlim([0.8*i - 6,  0.8*i + 20])
+                plt.xlim([9.6*i/fps - 6,  9.6*i/fps + 20])
             elif mode == 1:
-                plt.xlim([1.0*i - 6,  1.0*i + 20])
+                plt.xlim([12*i/fps - 6,  12*i/fps + 20])
             else:
-                plt.xlim([1.0*i - 6,  1.0*i + 20])
+                plt.xlim([12*i/fps - 6,  12*i/fps + 20])
             writer.grab_frame()
             print('Writing frame ' + str(i) + ' out of ' + str(TT))
             pev.remove()
+            tev.remove()
             for j in range(M):
                 pov[j].remove()
+                tov[j].remove()
+
     print("---------------------------------------------------------")
     print('Video saved to ' + dir)
     print("---------------------------------------------------------")

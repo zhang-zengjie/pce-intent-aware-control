@@ -2,7 +2,7 @@ import numpy as np
 from config.case_1_config import initialize, visualize, record, complexity
 
 # First of first, choose the scene
-scene = 0    # Select the scene of certain intentions: 
+scene = 2    # Select the scene of certain intentions: 
             # 0 for a switching-lane OV 
             # 1 for a slowing-down OV
             # 2 for a speeding-up OV
@@ -39,10 +39,10 @@ if False:
     # Visualize the result
     visualize(agents, xe[:, :N-1], xo[:, :, :N-1], scene)
 
-if False:
-    # Record the video
-    record(agents, xe[:, :N-1], xo[:, :, :N-1], scene, fps=12)
-
 if True:
+    # Record the video
+    record(agents, xe[:, :N-1], xo[:, :, :N-1], scene, fps=24)
+
+if False:
     # Visualize complexity analysis
     complexity(dir)
