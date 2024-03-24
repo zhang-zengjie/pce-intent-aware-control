@@ -255,7 +255,7 @@ def complexity(dir):
 
     plt.xlabel('Steps', fontsize="11")
     plt.ylabel('Computation time (s)', fontsize="11")
-    plt.legend([s0, s1, s2], ['switch lane', 'slow down', 'speed up'], loc=(0.62, 0.55), fontsize="11", ncol=1)
+    plt.legend([s1, s2, s0], ['slow down', 'speed up', 'switch lane'], loc=(0.62, 0.55), fontsize="11", ncol=1)
     plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.12)
     fig.tight_layout()
     plt.grid(linestyle='-.')
