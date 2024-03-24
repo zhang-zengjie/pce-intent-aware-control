@@ -6,6 +6,7 @@ import chaospy as cp
 from matplotlib.patches import Rectangle, Circle
 from matplotlib.animation import FFMpegWriter
 from scipy.interpolate import CubicSpline
+from libs.bicycle_model import BicycleModel
 from libs.commons import tf_anchor as tf
 
 lw = 8                       # The lane width
@@ -311,3 +312,49 @@ def record(agents, xe, xo, xp, mode, fps=12):
     print("---------------------------------------------------------")
     print('Video saved to ' + dir)
     print("---------------------------------------------------------")
+
+
+def complexity(dir):
+
+    runtime = [np.load(dir + 'run_time_' + str(scene) + '.npy') for scene in range(2)]
+    T = len(runtime[0])
+    ts = np.arange(0, T)
+
+    fig = plt.figure(figsize=(5, 2.5))
+    ax = plt.axes()
+
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    s0 = plt.scatter(ts, runtime[0], marker='o', s=60, color='#3333ff')
+    s1 = plt.scatter(ts, runtime[1], marker='v', s=60, color='#ff0000')
+    plt.xlabel('Steps', fontsize="12")
+    plt.ylabel('Computation time (s)', fontsize="12")
+    plt.legend([s0, s1], ['no awareness', 'intention aware'], loc=(0.5, 0.6), fontsize="11", ncol=1)
+    plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.12)
+    fig.tight_layout()
+    plt.grid(linestyle='-.')
+    plt.xlim([-0.5, T + 0.5])
+    plt.ylim([-0.1, 2.1])
+    plt.show()
+
+
+def initialize(mode, N):
+
+    dt = 0.5                       # Baseline value of sampling time delta_t    
+    l = 3.6                          # Baseline value of the vehicle length
+    q = 2                          # Polynomial order
+    R = np.array([[1, 0], [0, 1]]) # Control cost
+
+    np.random.seed(7)
+
+    v1, v2 = get_feedforward(N)          # The assumed control mode of the opponent vehicle (OV)
+    B1, B2 = get_bases(l, q)                # Generate PCE bases
+    e0, o0, p0 = get_initial_states()         # Get initial conditions
+
+    sys = {'ego': BicycleModel(dt, x0=e0, param=[0, l, 1], N=N, useq=np.zeros(v1.shape), R=R, name='ego'),                                     # Dynamic model of the ego vehicle (EV)
+           'oppo': BicycleModel(dt, x0=o0, param=[0, l, 1], N=N, useq=v1, basis=B1, pce=True, name='oppo'),      # Dynamic model of the opponent vehicle (OV)
+           'pedes': BicycleModel(dt, x0=p0, param=[0, 0.5, 1], N=N, useq=v2, basis=B2, pce=True, name='pedes')}    # Dynamic model of the pedestrian (PD)
+
+    phi = get_specs(sys, N, mode)
+
+    return sys, phi

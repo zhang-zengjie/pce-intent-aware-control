@@ -1,9 +1,8 @@
 import numpy as np
-from config.intersection.params import initialize
-from config.intersection.functions import visualize, record
+from config.case_2_config import initialize, visualize, record, complexity
 
 # First of first, choose the scenario
-scene = 0    # Select simulation scenario: 
+scene = 1    # Select simulation scenario: 
         # 0 for no_reaction 
         # 1 for reaction with proposed method
 N = 35
@@ -43,10 +42,14 @@ for j in range(M):
     xo[j] = agents['oppo'].states
     xp[j] = agents['pedes'].states
 
-if True:
+if False:
     # Visualize the result
     visualize(agents, xe, xo, xp, cursor=cursors[1])
 
 if False:
     # Record the video
     record(agents, xe, xo, xp, scene, fps=12)
+
+if True:
+    # Visualize complexity analysis
+    complexity(dir)

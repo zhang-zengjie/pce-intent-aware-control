@@ -6,6 +6,7 @@ import chaospy as cp
 from matplotlib.patches import Rectangle
 from matplotlib.animation import FFMpegWriter
 from scipy.interpolate import CubicSpline
+from libs.bicycle_model import BicycleModel
 from libs.commons import tf_anchor as tf
 
 # The latitudinal coordinates
@@ -235,4 +236,51 @@ def record(agents, xe, xo, mode, fps=12):
     print("---------------------------------------------------------")
     print('Video saved to ' + dir)
     print("---------------------------------------------------------")
-        
+
+
+def complexity(dir):
+
+    runtime = [np.load(dir + 'run_time_' + str(scene) + '.npy') for scene in range(3)]
+    T = len(runtime[0])
+    ts = np.arange(0, T)
+
+    fig = plt.figure(figsize=(5, 2.5))
+    ax = plt.axes()
+
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    s0 = plt.scatter(ts, runtime[0], marker='o', s=60, facecolors='none', edgecolors='#3333ff', linewidths=1.5)
+    s1 = plt.scatter(ts, runtime[1], marker='v', s=60, facecolors='none', edgecolors='#ff0000', linewidths=1.5)
+    s2 = plt.scatter(ts, runtime[2], marker='*', s=60, facecolors='none', edgecolors='#003300', linewidths=1.5)
+
+    plt.xlabel('Steps', fontsize="11")
+    plt.ylabel('Computation time (s)', fontsize="11")
+    plt.legend([s0, s1, s2], ['switch lane', 'slow down', 'speed up'], loc=(0.62, 0.55), fontsize="11", ncol=1)
+    plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.12)
+    fig.tight_layout()
+    plt.grid(linestyle='-.')
+    plt.xlim([-0.5, T - 0.5])
+    plt.ylim([-0.01, 0.21])
+    plt.show()
+
+
+def initialize(mode, N):
+
+    dt = 1                                       # The discrete sampling time Delta_t
+    l = 4                                        # The baseline value of the vehicle length
+    q = 2                               # The polynomial order
+    R = np.array([[1e4, 0], [0, 1e-6]])          # Control cost
+
+    np.random.seed(7)
+    
+    v = get_feedforward(N, mode)                   # The certain intention of the obstacle vehicle (OV)
+    B = get_bases(l, q)                             # The chaos basis object
+    e0, o0 = get_initial_states()
+    
+    sys = {'ego': BicycleModel(dt, x0=e0, param=[0, l, 1], N=N, useq=np.zeros(v.shape), R=R, name='ego'),     # Dynamic model of the ego vehicle (EV) 
+           'oppo': BicycleModel(dt, x0=o0, param=[0, l, 1], N=N, useq=v, basis=B, pce=True, name='oppo')     # Dynamic model of the obstacle vehicle (OV)
+           }
+    
+    phi = get_specs(B, N, 'oppo')    # Specification
+
+    return sys, phi
