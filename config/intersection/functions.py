@@ -20,7 +20,16 @@ a2 = np.array([0, 1, 0, 0])
 a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
+<<<<<<< HEAD
 def get_feedforward(T):
+=======
+def tf_anchor(x, y, theta):
+    xr = x - math.cos(theta) * veh_len/2 + math.sin(theta) * veh_width/2
+    yr = y - math.sin(theta) * veh_len/2 - math.cos(theta) * veh_width/2
+    return (xr, yr)
+
+def get_intentions(T):
+>>>>>>> 35f8ca739a580c5bbd00dbf9549467b8ae19179e
 
     u1 = np.zeros((2, T))   
     u1[1] -= 0.2                   # OV has deceleration or acceleration behaviors
@@ -173,17 +182,35 @@ def visualize(agents, xe, xo, xp, cursor):
             plt.plot([0.5*i*lw, 0.5*i*lw], [1.5*j*lw, 3*j*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
             plt.plot([1.5*j*lw, 3*j*lw], [0.5*i*lw, 0.5*i*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
 
+<<<<<<< HEAD
     def _vs(name):
 
         vl = agents[name].param[1]         # Length of EV
         vw = agents[name].param[1]/2       # Width of EV
 
         return {'width': vl, 'height': vw}
+=======
+    # Plot the trajectory of the ego vehicle (EV)
+>>>>>>> 35f8ca739a580c5bbd00dbf9549467b8ae19179e
 
     c_ego = plt.get_cmap('Reds')
     c_oppo = plt.get_cmap('Blues')
     c_pedes = plt.get_cmap('YlOrBr')
 
+<<<<<<< HEAD
+=======
+    # Plot the sampled trajectories of the obstacle vehicle (OV) 
+
+    for j in range(M):
+        
+        pov = ax.add_patch(Rectangle(xy=tf_anchor(*(tr_oppo[j, :3, cursor]+np.array([veh_len, 0, 0]))), angle=tr_oppo[j, 2, cursor]*180/np.pi, 
+                                width=veh_len, height=veh_width, linewidth=1, linestyle='--', fill=True, 
+                                edgecolor='black', facecolor=c_oppo((cursor/T)**4), zorder=20-tr_oppo[j, 0, cursor]))
+
+        ppd = ax.add_patch(Circle(xy=tuple(tr_pedes[j, :2, cursor]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
+                                edgecolor='black', facecolor=c_pedes((cursor/T)**4), zorder=20-tr_pedes[j, 0, cursor]))
+
+>>>>>>> 35f8ca739a580c5bbd00dbf9549467b8ae19179e
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
     plt.xlim(x_lim)
@@ -253,12 +280,16 @@ def record(agents, xe, xo, xp, mode, fps=12):
             plt.plot([0.5*i*lw, 0.5*i*lw], [1.5*j*lw, 3*j*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
             plt.plot([1.5*j*lw, 3*j*lw], [0.5*i*lw, 0.5*i*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
 
+<<<<<<< HEAD
     def _vs(name):
 
         vl = agents[name].param[1]         # Length of EV
         vw = agents[name].param[1]/2       # Width of EV
 
         return {'width': vl, 'height': vw}
+=======
+    # Plot the trajectory of the ego vehicle (EV)
+>>>>>>> 35f8ca739a580c5bbd00dbf9549467b8ae19179e
 
     c_ego = plt.get_cmap('Reds')
     c_oppo = plt.get_cmap('Blues')
