@@ -3,14 +3,14 @@ from libs.pce_milp_solver import PCEMILPSolver
 from config.overtaking.params import initialize
 
 # First of first, choose the mode
-intent = 2    # Select the certain intention mode of OV: 
+scene = 2    # Select the certain intention mode of OV: 
             # 0 for switching-lane
             # 1 for slowing-down
             # 2 for speeding-up
 N = 15      # Control horizon
 
 # Initialize system and specification
-agents, phi = initialize(intent, N)
+agents, phi = initialize(scene, N)
             # agents: the dictionary of agents (vehicles)
                 # agents['ego']: ego vehicle (EV)
                 # agents['oppo']: opponent vehicle (OV)
@@ -55,5 +55,5 @@ for i in range(N):
     solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
 
 # Save data
-np.save('data/overtaking/x_intent_' + str(intent) + '.npy', solver.agents['ego'].states)
-np.save('data/overtaking/z_intent_' + str(intent) + '.npy', solver.agents['oppo'].pce_coefs)
+np.save('data/overtaking/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
+np.save('data/overtaking/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)

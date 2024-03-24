@@ -1,18 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from libs.pce_basis import PCEBasis
 import math
-from matplotlib.patches import Rectangle, Circle
 from libs.pce_basis import PCEBasis
 import chaospy as cp
-from scipy.interpolate import CubicSpline
+from matplotlib.patches import Rectangle, Circle
 from matplotlib.animation import FFMpegWriter
+from scipy.interpolate import CubicSpline
+from libs.commons import tf_anchor as tf
 
-
-l = 8                       # The lane width
-q = 2                       # The polynomial order
-veh_width = 1.8
-veh_len = 3.6
+lw = 8                       # The lane width
 
 gray = (102/255, 102/255, 102/255)
 light_gray = (230/255, 230/255, 230/255)
@@ -24,28 +20,25 @@ a2 = np.array([0, 1, 0, 0])
 a3 = np.array([0, 0, 1, 0])
 a4 = np.array([0, 0, 0, 1])
 
-def get_intentions(T):
+def get_feedforward(T):
 
-    # gamma1 = np.zeros((T, ))
-    # a1 = - 0.2 * np.ones((T, ))
-    # u1 = np.array([gamma1, a1])
+    u1 = np.zeros((2, T))   
+    u1[1] -= 0.2                   # OV has deceleration or acceleration behaviors
 
-    u1 = np.zeros((2, T))
-    u2 = np.zeros((2, T))
+    u2 = np.zeros((2, T))          # Pedestrians move in constant speeds
 
-    u1[1] -= 0.2
     return u1, u2
 
-def get_initials():
+def get_initial_states():
 
-    e0 = np.array([-l*2, -l/2, 0, 3])              # Initial state of the ego vehicle (EV)
-    o0 = np.array([25, l/2, math.pi, 2.2])             # Initial state of the obstacle vehicle (OV)
-    p0 = np.array([1.2*l, 1.2*l, math.pi, 0.5])        # Initial state of the pedestrian (PD)
+    e0 = np.array([-lw*2, -lw/2, 0, 3])                  # The ego vehicle (EV) starts with 3 m/s
+    o0 = np.array([25, lw/2, math.pi, 2.2])             # The obstacle vehicle (OV) starts with 2.2 m/s
+    p0 = np.array([1.2*lw, 1.2*lw, math.pi, 0.5])        # The pedestrians (PD) walk in a average speed 0.5 m/s
 
     return e0, o0, p0
 
 
-def gen_bases():
+def get_bases(l, q):
 
     bias1 = cp.Normal(0, 1e-2)
     intent1 = cp.DiscreteUniform(-1, 1)
@@ -81,15 +74,15 @@ def approximate(sys, tr, nodes, Q, i):
 
 def turn_specs(B, N, sys_id):
 
-    reach = B.gen_bs_predicate(a1, o, l/2 - l/2, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(-a1, o, -l/2 - l/2, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(a2, o, 3/2*l, epsilon=1, name=sys_id) & \
+    reach = B.gen_bs_predicate(a1, o, lw/2 - lw/2, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(-a1, o, -lw/2 - lw/2, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(a2, o, 3/2*lw, epsilon=1, name=sys_id) & \
         B.gen_bs_predicate(a3, o, np.pi/2- 0.1, epsilon=1, name=sys_id) & \
         B.gen_bs_predicate(-a3, o, -np.pi/2- 0.1, epsilon=1, name=sys_id) 
 
-    bet_out = B.gen_bs_predicate(a2, o, -l/2 - 0.1, epsilon=1, name=sys_id) & \
-        B.gen_bs_predicate(-a2, o, l/2 - 0.1, epsilon=1, name=sys_id)
-    vel_out = B.gen_bs_predicate(a1, o, -1.2*l, epsilon=1, name=sys_id)
+    bet_out = B.gen_bs_predicate(a2, o, -lw/2 - 0.1, epsilon=1, name=sys_id) & \
+        B.gen_bs_predicate(-a2, o, lw/2 - 0.1, epsilon=1, name=sys_id)
+    vel_out = B.gen_bs_predicate(a1, o, -1.2*lw, epsilon=1, name=sys_id)
     
     drive_out = vel_out | bet_out
 
@@ -127,7 +120,7 @@ def safety_specs_multi_modal(B, N, sys_id, std, dist=4, eps=0.05):
     return phi
 
 
-def get_spec(sys, N, mode):
+def get_specs(sys, N, mode):
     phi_ego = turn_specs(sys['oppo'].basis, N, 'ego')
     if mode == 0:
         phi = phi_ego
@@ -152,68 +145,44 @@ def model_checking(x, z, spec, k):
     return rho
 
 
-def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
+def visualize(agents, xe, xo, xp, cursor):
+
+    T = xe.shape[1]
+    M = xo.shape[0]
+
+    x_lim = [-3*lw, 3*lw]
+    y_lim = [-3*lw, 3*lw]
 
     fig = plt.figure(figsize=(3.5, 3.3))
     ax = plt.axes()
-    
-    x_lim = [-3*l, 3*l]
-    y_lim = [-3*l, 3*l]
-
-    T = tr_ego.shape[1]
-    M = tr_oppo.shape[0]
-
-    gray = (102/255, 102/255, 102/255)
-    light_gray = (230/255, 230/255, 230/255)
 
     # Draw the environment
-
     for i in [-1, 1]:
 
         for r in np.arange(-0.9, 1, 0.1):
-            plt.plot([r*l, r*l], [1.1*i*l, 1.4*i*l], color=gray, linewidth=2, zorder=-20)
-            plt.plot([1.1*i*l, 1.4*i*l], [r*l, r*l], color=gray, linewidth=2, zorder=-20)
+            plt.plot([r*lw, r*lw], [1.1*i*lw, 1.4*i*lw], color=gray, linewidth=2, zorder=-20)
+            plt.plot([1.1*i*lw, 1.4*i*lw], [r*lw, r*lw], color=gray, linewidth=2, zorder=-20)
 
-        plt.plot([0, 0], [1.5*i*l, 3*i*l], color='black', linewidth=1, zorder=-20)
-        plt.plot([1.5*i*l, 3*i*l], [0, 0], color='black', linewidth=1, zorder=-20)
+        plt.plot([0, 0], [1.5*i*lw, 3*i*lw], color='black', linewidth=1, zorder=-20)
+        plt.plot([1.5*i*lw, 3*i*lw], [0, 0], color='black', linewidth=1, zorder=-20)
 
         for j in [-1, 1]:
-            plt.plot([i*l, i*l], [j*l, 3*j*l], color='black', linewidth=2, zorder=-20)
-            plt.plot([j*l, 3*j*l], [i*l, i*l], color='black', linewidth=2, zorder=-20)
+            plt.plot([i*lw, i*lw], [j*lw, 3*j*lw], color='black', linewidth=2, zorder=-20)
+            plt.plot([j*lw, 3*j*lw], [i*lw, i*lw], color='black', linewidth=2, zorder=-20)
 
-            plt.plot([0.5*i*l, 0.5*i*l], [1.5*j*l, 3*j*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
-            plt.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
+            plt.plot([0.5*i*lw, 0.5*i*lw], [1.5*j*lw, 3*j*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
+            plt.plot([1.5*j*lw, 3*j*lw], [0.5*i*lw, 0.5*i*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
 
-    # Plot the trajectory of the ego vehicle (EV)
-            
-    def tf_anchor(x, y, theta):
-        xr = x - math.cos(theta) * veh_len + math.sin(theta) * veh_width/2
-        yr = y - math.sin(theta) * veh_len - math.cos(theta) * veh_width/2
-        return (xr, yr)
+    def _vs(name):
+
+        vl = agents[name].param[1]         # Length of EV
+        vw = agents[name].param[1]/2       # Width of EV
+
+        return {'width': vl, 'height': vw}
 
     c_ego = plt.get_cmap('Reds')
-    for i in range(0, T):
-        ax.add_patch(Rectangle(xy=tf_anchor(*tr_ego[:3, i]), angle=tr_ego[2, i]*180/np.pi, 
-                               width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
-                               edgecolor='red', facecolor=c_ego((i/T)**1), zorder=0))
-        
-    pev = ax.add_patch(Rectangle(xy=tf_anchor(*tr_ego[:3, cursor]), angle=tr_ego[2, cursor]*180/np.pi, 
-                               width=veh_len, height=veh_width, linewidth=1.5, fill=True,
-                               edgecolor='black', facecolor=c_ego((cursor/T)**1), zorder=0))
-        
     c_oppo = plt.get_cmap('Blues')
     c_pedes = plt.get_cmap('YlOrBr')
-
-    # Plot the sampled trajectories of the obstacle vehicle (OV) 
-
-    for j in range(M):
-        
-        pov = ax.add_patch(Rectangle(xy=tf_anchor(*tr_oppo[j, :3, cursor]), angle=tr_oppo[j, 2, cursor]*180/np.pi, 
-                                width=4, height=2, linewidth=1, linestyle='--', fill=True, 
-                                edgecolor='black', facecolor=c_oppo((cursor/T)**1), zorder=20-tr_oppo[j, 0, cursor]))
-
-        ppd = ax.add_patch(Circle(xy=tuple(tr_pedes[j, :2, cursor]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
-                                edgecolor='black', facecolor=c_pedes((cursor/T)**1), zorder=20-tr_pedes[j, 0, cursor]))
 
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
@@ -221,72 +190,80 @@ def visualize(tr_ego, tr_oppo, tr_pedes, cursor):
     plt.ylim(y_lim)
     plt.xlabel('x position (m)', fontsize="12")
     plt.ylabel('y position (m)', fontsize="12")
-    plt.legend([pev, pov, ppd], ['Ego vehicle', 'Opponent vehicle', 'Pedestrian'], loc=(0.03, 0.03), fontsize="10", ncol=1)
     plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.13)
     fig.tight_layout()
 
+    # Plot the trajectory of the ego vehicle (EV)
+    for i in range(T):
+        ax.add_patch(Rectangle(xy=tf(*xe[:3, i], **_vs('ego')), angle=xe[2, i]*180/np.pi, **_vs('ego'), 
+                               linewidth=1.5, linestyle=':', fill=True, edgecolor='red', facecolor=c_ego((i/T)**1), zorder=0))
+        
+    pev = ax.add_patch(Rectangle(xy=tf(*xe[:3, cursor], **_vs('ego')), angle=xe[2, cursor]*180/np.pi, **_vs('ego'), 
+                               linewidth=1.5, fill=True, edgecolor='black', facecolor=c_ego((cursor/T)**1), zorder=0))
+
+    # Plot the sampled trajectories of the obstacle vehicle (OV) 
+    for j in range(M):
+        
+        pov = ax.add_patch(Rectangle(xy=tf(*xo[j, :3, cursor], **_vs('ego')), angle=xo[j, 2, cursor]*180/np.pi, **_vs('ego'), 
+                                linewidth=1, linestyle='--', fill=True, edgecolor='black', facecolor=c_oppo((cursor/T)**1), zorder=20-xo[j, 0, cursor]))
+
+        ppd = ax.add_patch(Circle(xy=tuple(xp[j, :2, cursor]), radius=_vs('pedes')['width'], linewidth=1.5, linestyle='--', fill=True, 
+                                edgecolor='black', facecolor=c_pedes((cursor/T)**1), zorder=20-xp[j, 0, cursor]))
+
+    plt.legend([pev, pov, ppd], ['Ego vehicle', 'Opponent vehicle', 'Pedestrian'], loc=(0.03, 0.03), fontsize="10", ncol=1)
     plt.show()
 
 
-def record(tr_ego, tr_oppo, tr_pedes, mode, Ts=0.5, fps=12):
+def record(agents, xe, xo, xp, mode, fps=12):
+
+    T = xe.shape[1]
+    M = xo.shape[0]
+    Ts = agents['ego'].dt
+    TT = T * fps * Ts
+
+    x_lim = [-3*lw, 3*lw]
+    y_lim = [-3*lw, 3*lw]
 
     fig = plt.figure(figsize=(6, 5.7))
     ax = plt.axes()
     plt.rcParams['animation.ffmpeg_path'] = 'C:\\Program Files (x86)\\ffmpeg-full_build\\bin\\ffmpeg.exe'
 
-    T = tr_ego.shape[1]
-    M = tr_oppo.shape[0]
     ts = np.arange(0, T)
     tau = np.arange(0, T, 1/(fps*Ts))
 
-    e_func_x = CubicSpline(ts, tr_ego[0])
-    e_func_y = CubicSpline(ts, tr_ego[1])
-    e_func_t = CubicSpline(ts, tr_ego[2])
-    o_funcs_x = [CubicSpline(ts, tr_oppo[j, 0, :]) for j in range(0, M)]
-    o_funcs_y = [CubicSpline(ts, tr_oppo[j, 1, :]) for j in range(0, M)]
-    o_funcs_t = [CubicSpline(ts, tr_oppo[j, 2, :]) for j in range(0, M)]
-    p_funcs_x = [CubicSpline(ts, tr_pedes[j, 0, :]) for j in range(0, M)]
-    p_funcs_y = [CubicSpline(ts, tr_pedes[j, 1, :]) for j in range(0, M)]
-    p_funcs_t = [CubicSpline(ts, tr_pedes[j, 2, :]) for j in range(0, M)]
-
-    x_lim = [-3*l, 3*l]
-    y_lim = [-3*l, 3*l]
-
-    gray = (102/255, 102/255, 102/255)
-    light_gray = (230/255, 230/255, 230/255)
+    fe = [CubicSpline(ts, xe[i]) for i in range(3)]
+    fo = [[CubicSpline(ts, xo[j, i, :]) for j in range(M)] for i in range(3)]
+    fp = [[CubicSpline(ts, xp[j, i, :]) for j in range(M)] for i in range(3)]
 
     # Draw the environment
 
     for i in [-1, 1]:
 
         for r in np.arange(-0.9, 1, 0.1):
-            plt.plot([r*l, r*l], [1.1*i*l, 1.4*i*l], color=gray, linewidth=2, zorder=-20)
-            plt.plot([1.1*i*l, 1.4*i*l], [r*l, r*l], color=gray, linewidth=2, zorder=-20)
+            plt.plot([r*lw, r*lw], [1.1*i*lw, 1.4*i*lw], color=gray, linewidth=2, zorder=-20)
+            plt.plot([1.1*i*lw, 1.4*i*lw], [r*lw, r*lw], color=gray, linewidth=2, zorder=-20)
 
-        plt.plot([0, 0], [1.5*i*l, 3*i*l], color='black', linewidth=1, zorder=-20)
-        plt.plot([1.5*i*l, 3*i*l], [0, 0], color='black', linewidth=1, zorder=-20)
+        plt.plot([0, 0], [1.5*i*lw, 3*i*lw], color='black', linewidth=1, zorder=-20)
+        plt.plot([1.5*i*lw, 3*i*lw], [0, 0], color='black', linewidth=1, zorder=-20)
 
         for j in [-1, 1]:
-            plt.plot([i*l, i*l], [j*l, 3*j*l], color='black', linewidth=2, zorder=-20)
-            plt.plot([j*l, 3*j*l], [i*l, i*l], color='black', linewidth=2, zorder=-20)
+            plt.plot([i*lw, i*lw], [j*lw, 3*j*lw], color='black', linewidth=2, zorder=-20)
+            plt.plot([j*lw, 3*j*lw], [i*lw, i*lw], color='black', linewidth=2, zorder=-20)
 
-            plt.plot([0.5*i*l, 0.5*i*l], [1.5*j*l, 3*j*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
-            plt.plot([1.5*j*l, 3*j*l], [0.5*i*l, 0.5*i*l], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
+            plt.plot([0.5*i*lw, 0.5*i*lw], [1.5*j*lw, 3*j*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
+            plt.plot([1.5*j*lw, 3*j*lw], [0.5*i*lw, 0.5*i*lw], color=light_gray, linewidth=1, linestyle='dotted', zorder=-20)
 
-    # Plot the trajectory of the ego vehicle (EV)
-            
-    def tf_anchor(x, y, theta):
-        xr = x + math.sin(theta) * veh_width/2
-        yr = y - math.cos(theta) * veh_width/2
-        return (xr, yr)
+    def _vs(name):
+
+        vl = agents[name].param[1]         # Length of EV
+        vw = agents[name].param[1]/2       # Width of EV
+
+        return {'width': vl, 'height': vw}
 
     c_ego = plt.get_cmap('Reds')
     c_oppo = plt.get_cmap('Blues')
     c_pedes = plt.get_cmap('YlOrBr')
-
-    metadata = dict(title='Movie', artist='Zengjie Zhang')
-    writer = FFMpegWriter(fps=fps, metadata=metadata)
-
+    
     plt.rcParams['pdf.fonttype'] = 42
     plt.rcParams['ps.fonttype'] = 42
     plt.xlim(x_lim)
@@ -297,26 +274,29 @@ def record(tr_ego, tr_oppo, tr_pedes, mode, Ts=0.5, fps=12):
     plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.13)
     fig.tight_layout()
 
+    metadata = dict(title='Movie', artist='Zengjie Zhang')
+    writer = FFMpegWriter(fps=fps, metadata=metadata)
+
     # Plot the sampled trajectories of the obstacle vehicle (OV) 
-    with writer.saving(fig, 'intersection_mode_' + str(mode) + '.mp4', 300):
+    with writer.saving(fig, 'media/intersection_scene_' + str(mode) + '.mp4', 300):
 
         for i, t in enumerate(tau):
         
-            pev = ax.add_patch(Rectangle(xy=tf_anchor(e_func_x(t), e_func_y(t), e_func_t(t)), angle=e_func_t(t)*180/np.pi, 
-                               width=veh_len, height=veh_width, linewidth=1.5, linestyle=':', fill=True,
-                               edgecolor='red', facecolor=c_ego((i/len(tau))**1), zorder=50))
+            pev = ax.add_patch(Rectangle(xy=tf(fe[0](t), fe[1](t), fe[2](t), **_vs('ego')), angle=fe[2](t)*180/np.pi, 
+                               **_vs('ego'), linewidth=1.5, linestyle=':', fill=True,
+                               edgecolor='red', facecolor=c_ego((i/TT)**1), zorder=50))
 
-            pov = [ax.add_patch(Rectangle(xy=tf_anchor(o_funcs_x[j](t), o_funcs_y[j](t), o_funcs_t[j](t)), angle=o_funcs_t[j](t)*180/np.pi, 
-                                    width=veh_len, height=veh_width, linewidth=1, linestyle='--', fill=True, 
-                                    edgecolor='black', facecolor=c_oppo((i/len(tau))**1), zorder=20-o_funcs_x[j](t)))
+            pov = [ax.add_patch(Rectangle(xy=tf(fo[0][j](t), fo[1][j](t), fo[2][j](t), **_vs('ego')), angle=fo[2][j](t)*180/np.pi, 
+                                    **_vs('oppo'), linewidth=1, linestyle='--', fill=True, 
+                                    edgecolor='black', facecolor=c_oppo((i/TT)**1), zorder=20-fo[0][j](t)))
                     for j in range(M)]
             
-            ppd = [ax.add_patch(Circle(xy=tuple([p_funcs_x[j](t), p_funcs_y[j](t), p_funcs_t[j](t)]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
-                                    edgecolor='black', facecolor=c_pedes((i/len(tau))**1), zorder=20-p_funcs_x[j](t)))
+            ppd = [ax.add_patch(Circle(xy=tuple([fp[0][j](t), fp[1][j](t), fp[2][j](t)]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
+                                    edgecolor='black', facecolor=c_pedes((i/TT)**1), zorder=20-fp[0][j](t)))
                     for j in range(M)]
             
             writer.grab_frame()
-            print('Writing frame ' + str(i) + ' out of ' + str(len(tau)))
+            print('Writing frame ' + str(i) + ' out of ' + str(TT))
             pev.remove()
             for j in range(M):
                 pov[j].remove()
