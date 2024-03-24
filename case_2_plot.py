@@ -7,14 +7,21 @@ scene = 0    # Select simulation scenario:
         # 0 for no_reaction 
         # 1 for reaction with proposed method
 N = 35
+dir = 'data/intersection/'
 
+print("---------------------------------------------------------")
+print('Initializing...')
+print("---------------------------------------------------------")
 # Initialize system and specification
 agents, phi = initialize(scene, N)
             # agents: the dictionary of agents
             # phi: the task specification
 
 # Load the data of the ego agent
-xe = np.load('data/intersection/xe_scene_' + str(scene) + '.npy')
+print("---------------------------------------------------------")
+print('Loading data from ' + dir)
+print("---------------------------------------------------------")
+xe = np.load(dir + 'xe_scene_' + str(scene) + '.npy')
 
 cursors = [16, 20]
 
@@ -36,10 +43,10 @@ for j in range(M):
     xo[j] = agents['oppo'].states
     xp[j] = agents['pedes'].states
 
-if False:
+if True:
     # Visualize the result
     visualize(agents, xe, xo, xp, cursor=cursors[1])
 
-if True:
+if False:
     # Record the video
     record(agents, xe, xo, xp, scene, fps=12)
