@@ -3,7 +3,7 @@ from libs.pce_milp_solver import PCEMILPSolver
 from config.intersection.params import initialize
 
 # First of first, choose the scenario
-scene = 0    # Select simulation scenario: 
+scene = 1    # Select simulation scenario: 
         # 0 for no_awareness 
         # 1 for intention_aware
 N = 35
@@ -52,6 +52,6 @@ for i in range(N):
     solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
     solver.agents['pedes'].apply_control(i, solver.agents['pedes'].useq[:, i])
 
-np.save('data/intersection/x_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-np.save('data/intersection/z_oppo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-np.save('data/intersection/z_pedes_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
+np.save('data/intersection/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
+np.save('data/intersection/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
+np.save('data/intersection/xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)

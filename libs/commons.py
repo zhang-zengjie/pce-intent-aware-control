@@ -1,4 +1,12 @@
 import numpy as np
+import math
+
+
+def tf_anchor(x, y, theta, width, height):
+    xr = x - math.cos(theta) * width + math.sin(theta) * height/2
+    yr = y - math.sin(theta) * width - math.cos(theta) * height/2
+    return (xr, yr)
+
 
 def model_checking(x, z, spec, k):
 

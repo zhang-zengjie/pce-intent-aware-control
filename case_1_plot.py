@@ -2,35 +2,37 @@ import numpy as np
 from config.overtaking.params import initialize
 from config.overtaking.functions import visualize, record
 
-# First of first, choose the intent
-intent = 2    # Select the intent of certain intentions: 
+# First of first, choose the scene
+scene = 0    # Select the scene of certain intentions: 
             # 0 for a switching-lane OV 
             # 1 for a slowing-down OV
             # 2 for a speeding-up OV
 N = 15      # Control horizon
 
 # Initialize system and specification
-agents, _ = initialize(intent, N)
+agents, _ = initialize(scene, N)
             # agents: the dictionary of agents
                 # agents['ego']: ego vehicle (EV)
                 # agents['oppo']: opponent vehicle (OV)
 
 # Load the data of the ego agent
-xx = np.load('data/overtaking/x_intent_' + str(intent) + '.npy')
+xe = np.load('data/overtaking/xe_scene_' + str(scene) + '.npy')
 
 # Perform 100 times Monte Carlo sampling for the opponent agent
-M = 100     # Number of Monte Carlo runs
-zz_s = np.zeros([agents['oppo'].n, N + 1, M])
-samples = agents['oppo'].basis.eta.sample([M, ])
-for j in range(M):
-    agents['oppo'].param = [samples[0, j], samples[1, j], 1]
-    agents['oppo'].predict(0, N)
-    zz_s[:, :, j] = agents['oppo'].states
+M = 100                                         # Number of Monte Carlo runs
+so = agents['oppo'].basis.eta.sample([M, ])     # Monte Carlo samples
+xo = np.zeros([M, agents['oppo'].n, N + 1])     # Sampled trajectories
 
-if True:
-    # Visualize the result
-    visualize(xx[:, :N-1], zz_s[:, :N-1, :], intent)
+for j in range(M):
+    
+    agents['oppo'].param = [so[0, j], so[1, j], 1]
+    agents['oppo'].predict(0, N)
+    xo[j] = agents['oppo'].states
 
 if False:
+    # Visualize the result
+    visualize(agents, xe[:, :N-1], xo[:, :, :N-1], scene)
+
+if True:
     # Record the video
-    record(xx[:, :10], zz_s[:, :10, :], intent)
+    record(agents, xe[:, :N-1], xo[:, :, :N-1], scene, fps=12)
