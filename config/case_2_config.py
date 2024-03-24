@@ -292,10 +292,13 @@ def record(agents, xe, xo, xp, mode, fps=12):
             pev = ax.add_patch(Rectangle(xy=tf(fe[0](t), fe[1](t), fe[2](t), **_vs('ego')), angle=fe[2](t)*180/np.pi, 
                                **_vs('ego'), linewidth=1.5, linestyle=':', fill=True,
                                edgecolor='red', facecolor=c_ego((i/TT)**1), zorder=50))
+            tev = ax.text(fe[0](t), fe[1](t), 'EV        ', rotation=fe[2](t)*180/np.pi, horizontalalignment='center', verticalalignment='center', zorder=100)
 
             pov = [ax.add_patch(Rectangle(xy=tf(fo[0][j](t), fo[1][j](t), fo[2][j](t), **_vs('ego')), angle=fo[2][j](t)*180/np.pi, 
                                     **_vs('oppo'), linewidth=1, linestyle='--', fill=True, 
                                     edgecolor='black', facecolor=c_oppo((i/TT)**1), zorder=20-fo[0][j](t)))
+                    for j in range(M)]
+            tov = [ax.text(fo[0][j](t), fo[1][j](t), '        OV', rotation=0, horizontalalignment='center', verticalalignment='center', zorder=20-fo[0][j](t)+1e-6)
                     for j in range(M)]
             
             ppd = [ax.add_patch(Circle(xy=tuple([fp[0][j](t), fp[1][j](t), fp[2][j](t)]), radius=0.5, linewidth=1.5, linestyle='--', fill=True, 
@@ -305,10 +308,12 @@ def record(agents, xe, xo, xp, mode, fps=12):
             writer.grab_frame()
             print('Writing frame ' + str(i) + ' out of ' + str(TT))
             pev.remove()
+            tev.remove() 
+            
             for j in range(M):
                 pov[j].remove()
-                ppd[j].remove() 
-
+                ppd[j].remove()
+                tov[j].remove()
     print("---------------------------------------------------------")
     print('Video saved to ' + dir)
     print("---------------------------------------------------------")

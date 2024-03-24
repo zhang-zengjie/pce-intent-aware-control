@@ -46,10 +46,10 @@ if False:
     # Visualize the result
     visualize(agents, xe, xo, xp, cursor=cursors[1])
 
-if False:
-    # Record the video
-    record(agents, xe, xo, xp, scene, fps=12)
-
 if True:
+    # Record the video
+    record(agents, xe, xo, xp, scene, fps=24)
+
+if False:
     # Visualize complexity analysis
     complexity(dir)
