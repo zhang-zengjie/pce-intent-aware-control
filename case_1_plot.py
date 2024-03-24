@@ -1,6 +1,5 @@
 import numpy as np
-from config.overtaking.params import initialize
-from config.overtaking.functions import visualize, record
+from config.case_1_config import initialize, visualize, record, complexity
 
 # First of first, choose the scene
 scene = 0    # Select the scene of certain intentions: 
@@ -40,6 +39,10 @@ if False:
     # Visualize the result
     visualize(agents, xe[:, :N-1], xo[:, :, :N-1], scene)
 
-if True:
+if False:
     # Record the video
     record(agents, xe[:, :N-1], xo[:, :, :N-1], scene, fps=12)
+
+if True:
+    # Visualize complexity analysis
+    complexity(dir)

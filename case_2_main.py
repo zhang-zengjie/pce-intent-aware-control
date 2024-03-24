@@ -1,6 +1,6 @@
 import numpy as np
 from libs.pce_milp_solver import PCEMILPSolver
-from config.intersection.params import initialize
+from config.case_2_config import initialize
 
 # First of first, choose the scenario
 scene = 0    # Select simulation scenario: 
@@ -21,6 +21,7 @@ agents, phi = initialize(scene, N)
 
 # Load the solver
 solver = PCEMILPSolver(phi, agents, N)
+runtime = np.zeros((N, ))
 u_opt = np.zeros((2, ))
 
 for i in range(N):
@@ -43,7 +44,7 @@ for i in range(N):
     solver.AddQuadraticCost(i)
 
     # Solve the problem
-    x, u, rho, _ = solver.Solve()
+    x, u, rho, runtime[i] = solver.Solve()
                 # x: the state decision variables
                 # u: the control decision variables
                 # rho: the specification satisfaction variable
@@ -67,6 +68,8 @@ for i in range(N):
 np.save(dir + 'xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
 np.save(dir + 'xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
 np.save(dir + 'xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
+np.save(dir + 'run_time_' + str(scene) + '.npy', runtime)
+
 print("---------------------------------------------------------")
 print('Data saved to ' + dir)
 print("---------------------------------------------------------")
