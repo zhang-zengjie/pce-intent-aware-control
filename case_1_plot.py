@@ -8,7 +8,11 @@ scene = 0    # Select the scene of certain intentions:
             # 1 for a slowing-down OV
             # 2 for a speeding-up OV
 N = 15      # Control horizon
+dir = 'data/overtaking/'
 
+print("---------------------------------------------------------")
+print('Initializing...')
+print("---------------------------------------------------------")
 # Initialize system and specification
 agents, _ = initialize(scene, N)
             # agents: the dictionary of agents
@@ -16,7 +20,10 @@ agents, _ = initialize(scene, N)
                 # agents['oppo']: opponent vehicle (OV)
 
 # Load the data of the ego agent
-xe = np.load('data/overtaking/xe_scene_' + str(scene) + '.npy')
+print("---------------------------------------------------------")
+print('Loading data from' + dir)
+print("---------------------------------------------------------")
+xe = np.load(dir + 'xe_scene_' + str(scene) + '.npy')
 
 # Perform 100 times Monte Carlo sampling for the opponent agent
 M = 100                                         # Number of Monte Carlo runs

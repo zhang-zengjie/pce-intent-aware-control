@@ -3,11 +3,14 @@ from libs.pce_milp_solver import PCEMILPSolver
 from config.intersection.params import initialize
 
 # First of first, choose the scenario
-scene = 1    # Select simulation scenario: 
+scene = 0    # Select simulation scenario: 
         # 0 for no_awareness 
         # 1 for intention_aware
 N = 35
-
+dir = 'data/intersection/'
+print("---------------------------------------------------------")
+print('Initializing...')
+print("---------------------------------------------------------")
 # Initialize system and specification
 agents, phi = initialize(scene, N)
             # agents: the dictionary of agents
@@ -16,29 +19,36 @@ agents, phi = initialize(scene, N)
                 # agents['pedes']: pedestrians
             # phi: the task specification
 
-u_opt = np.zeros((2, ))
+# Load the solver
 solver = PCEMILPSolver(phi, agents, N)
+u_opt = np.zeros((2, ))
 
 for i in range(N):
 
+    # Update the linearized matrices
     solver.agents['ego'].update_matrices(i)
     solver.agents['oppo'].update_matrices(i)
     solver.agents['pedes'].update_matrices(i)
 
-    #solver.agents['oppo'].predict_pce(i, N)
+    # Update the linearized prediction
     solver.agents['oppo'].predict(i, N)
-    #solver.agents['pedes'].predict_pce(i, N)
     solver.agents['pedes'].predict(i, N)
 
-    # Solve
+    # Update the dynamics constraints
     solver.AddDynamicsConstraints(i)
 
+    # Update the cost
     solver.cost = 0.0
     solver.AddRobustnessCost()
-    # solver.AddRobustnessConstraint()
     solver.AddQuadraticCost(i)
+
+    # Solve the problem
     x, u, rho, _ = solver.Solve()
+                # x: the state decision variables
+                # u: the control decision variables
+                # rho: the specification satisfaction variable
     
+    # Remove old dynamics constraints
     solver.RemoveDynamicsConstraints()
 
     # In case infeasibility, stop
@@ -48,10 +58,15 @@ for i in range(N):
         u_opt[0] = 0
         u_opt[1] = - solver.agents['ego'].states[3, i]/solver.agents['ego'].dt
     
+    # Apply the control input
     solver.agents['ego'].apply_control(i, u_opt)
     solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
     solver.agents['pedes'].apply_control(i, solver.agents['pedes'].useq[:, i])
 
-np.save('data/intersection/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-np.save('data/intersection/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-np.save('data/intersection/xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
+# Save data
+np.save(dir + 'xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
+np.save(dir + 'xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
+np.save(dir + 'xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
+print("---------------------------------------------------------")
+print('Data saved to ' + dir)
+print("---------------------------------------------------------")

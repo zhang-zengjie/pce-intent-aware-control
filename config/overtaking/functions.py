@@ -144,7 +144,7 @@ def visualize(agents, xe, xo, mode):
         for j in range(M):
             pov = ax.add_patch(Rectangle(xy=(tf(*xo[j, :3, i], **_vs('oppo'))), **_vs('oppo'), 
                                          angle=xo[j, 2, i]/3.14*180, linewidth=1, linestyle='dotted', edgecolor=(0, 0, 51*4/255), 
-                                         fill=True, facecolor=c_oppo(i*0.8/T), zorder=10+i*M+xo[1, i, j]))
+                                         fill=True, facecolor=c_oppo(i*0.8/T), zorder=10+i*M+xo[j, 1, i]))
 
         pev = ax.add_patch(Rectangle(xy=(tf(*xe[:3, i], **_vs('ego'))), **_vs('ego'), 
                                      angle=xe[2, i]/3.14*180, linewidth=1, linestyle='dotted', edgecolor=(51*4/255, 0, 0), 
@@ -171,6 +171,7 @@ def record(agents, xe, xo, mode, fps=12):
     M = xo.shape[0]
     Ts = agents['ego'].dt
     TT = T * fps * Ts
+    dir = 'media/'
 
     ts = np.arange(0, T)
     tau = np.arange(0, T, 1/(fps*Ts))
@@ -209,7 +210,7 @@ def record(agents, xe, xo, mode, fps=12):
     c_ego = plt.get_cmap('Reds')
     c_oppo = plt.get_cmap('Blues')
 
-    with writer.saving(fig, 'media/overtaking_mode_' + str(mode) + '.mp4', 300):
+    with writer.saving(fig, dir + 'overtaking_mode_' + str(mode) + '.mp4', 300):
 
         # Plot the trajectory of the ego vehicle (EV)
         for i, t in enumerate(tau):
@@ -231,4 +232,7 @@ def record(agents, xe, xo, mode, fps=12):
             pev.remove()
             for j in range(M):
                 pov[j].remove()
+    print("---------------------------------------------------------")
+    print('Video saved to ' + dir)
+    print("---------------------------------------------------------")
         

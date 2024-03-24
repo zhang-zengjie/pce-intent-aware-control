@@ -8,7 +8,11 @@ scene = 2    # Select the certain intention mode of OV:
             # 1 for slowing-down
             # 2 for speeding-up
 N = 15      # Control horizon
+dir = 'data/overtaking/'    # The directory to save data
 
+print("---------------------------------------------------------")
+print('Initializing...')
+print("---------------------------------------------------------")
 # Initialize system and specification
 agents, phi = initialize(scene, N)
             # agents: the dictionary of agents (vehicles)
@@ -55,5 +59,8 @@ for i in range(N):
     solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
 
 # Save data
-np.save('data/overtaking/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-np.save('data/overtaking/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
+np.save(dir + 'xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
+np.save(dir + 'xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
+print("---------------------------------------------------------")
+print('Data saved to ' + dir)
+print("---------------------------------------------------------")
