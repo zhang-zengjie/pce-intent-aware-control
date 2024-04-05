@@ -11,6 +11,7 @@ import os
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(root)
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 
 from commons.basis import PCEBasis
 from commons.bicycle import BicycleModel
@@ -172,6 +173,7 @@ def visualize(agents, xe, xo, mode):
                            fill=True, facecolor=c_ego(i*0.8/T), zorder=10+M*T+i*M+xe[1, i]))
     
     plt.legend([pev, pov], ['EV', 'OV'], loc=legend_loc, fontsize="8", ncol=2)
+    plt.savefig(data_dir + '/overtaking_' + str(mode) + '.svg', bbox_inches='tight', pad_inches=0.1, transparent=True)
     plt.show()
 
 

@@ -5,12 +5,12 @@ import chaospy as cp
 from matplotlib.patches import Rectangle, Circle
 from matplotlib.animation import FFMpegWriter
 from scipy.interpolate import CubicSpline
-
 import sys
 import os
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(root)
+data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 
 from commons.basis import PCEBasis
 from commons.bicycle import BicycleModel
@@ -155,7 +155,7 @@ def model_checking(x, z, spec, k):
     return rho
 
 
-def visualize(agents, xe, xo, xp, cursor):
+def visualize(agents, xe, xo, xp, mode, cursor):
 
     T = xe.shape[1]
     M = xo.shape[0]
@@ -223,6 +223,7 @@ def visualize(agents, xe, xo, xp, cursor):
                                 edgecolor='black', facecolor=c_pedes((cursor/T)**1), zorder=20-xp[j, 0, cursor]))
 
     plt.legend([pev, pov, ppd], ['Ego vehicle', 'Opponent vehicle', 'Pedestrian'], loc=(0.03, 0.03), fontsize="10", ncol=1)
+    plt.savefig(data_dir + '/intersection_' + str(mode) + '_step_' + str(cursor) + '.svg', bbox_inches='tight', pad_inches=0.1, transparent=True)
     plt.show()
 
 
