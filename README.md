@@ -2,6 +2,10 @@
 
 The benchmark of using polynomial chaos expansion (PCE) to solve intention-aware control of autonomous vehicles.
 
+## Release
+
+It is suggested to download the `release` branch or the releases for a cleaned up version.
+
 ## Requirements
 
 **Operating system**
