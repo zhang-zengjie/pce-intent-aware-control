@@ -2,6 +2,7 @@ import numpy as np
 from config import initialize, data_dir
 import os
 from commons.pce_micp_solver import PCEMICPSolver
+from draw import draw
 
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
@@ -60,15 +61,6 @@ def main(scene):
         solver.agents['ego'].apply_control(i, u_opt)
         solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
 
-    # Save data
-    np.save(data_dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-    np.save(data_dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-    np.save(data_dir + '/run_time_' + str(scene) + '.npy', runtime)
-
-    print("---------------------------------------------------------")
-    print('Data saved to ' + data_dir)
-    print("---------------------------------------------------------")
-
     return solver.agents
 
 
@@ -79,4 +71,6 @@ if __name__ == "__main__":
                 # 0 for switching-lane
                 # 1 for slowing-down
                 # 2 for speeding-up
-    main(intent)
+
+    agents = main(intent)
+    draw(agents, intent)
