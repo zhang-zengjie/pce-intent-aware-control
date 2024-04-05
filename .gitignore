@@ -2,6 +2,7 @@
 *.npy
 *.eps
 *.jpg
+*.svg
 *.pdf
 *.png
 __pycache__
