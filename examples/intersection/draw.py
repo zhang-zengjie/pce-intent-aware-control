@@ -1,12 +1,11 @@
 import numpy as np
-from config import initialize, visualize, record, complexity
-import os
+from config import initialize, visualize, record, complexity, data_dir
+
 
 def main(scene):
 
     N = 35
-    dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
-
+    
     print("---------------------------------------------------------")
     print('Initializing...')
     print("---------------------------------------------------------")
@@ -16,20 +15,20 @@ def main(scene):
 
     # Load the data of the ego agent
     print("---------------------------------------------------------")
-    print('Loading data from ' + dir)
+    print('Loading data from ' + data_dir)
     print("---------------------------------------------------------")
-    xe = np.load(dir + '/xe_scene_' + str(scene) + '.npy')
+    agents['ego'].states = np.load(data_dir + '/xe_scene_' + str(scene) + '.npy')
 
-    cursors = [16, 20]
-
-    draw(xe, agents, cursors)
+    return agents
 
 
-def draw(xe, agents, cursors):
+def draw(agents, scene, step):
 
     # Perform 100 times Monte Carlo sampling for the opponent agent
     M = 100     # Number of Monte Carlo runs
     N = agents['ego'].N
+
+    xe = agents['ego'].states
     xo = np.zeros([M, agents['oppo'].n, N + 1])
     xp = np.zeros([M, agents['pedes'].n, N + 1])
     so = agents['oppo'].basis.eta.sample([M, ])
@@ -48,7 +47,7 @@ def draw(xe, agents, cursors):
 
     if True:
         # Visualize the result
-        visualize(agents, xe, xo, xp, cursor=cursors[1])
+        visualize(agents, xe, xo, xp, scene, step)
 
     if False:
         # Record the video
@@ -56,14 +55,18 @@ def draw(xe, agents, cursors):
 
     if False:
         # Visualize complexity analysis
-        complexity(dir)
+        complexity(data_dir)
 
 
 if __name__ == "__main__":
 
-    # First of first, choose the mode
-    intent = 1    # Select the intent of OV: 
-                # 0 for switching-lane
-                # 1 for slowing-down
-                # 2 for speeding-up
-    main(intent)
+    # First of first, choose the scenario
+    scene = 0       # 0 for no awareness
+                    # 1 for intention-aware
+    # Choose the instant of the view
+    step = 20       # 16: the step to show relation with the OV
+                    # 20: the step to show relation with the pedestrian
+    agents = main(scene)
+
+    draw(agents, scene, step)
+    

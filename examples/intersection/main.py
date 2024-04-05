@@ -1,5 +1,5 @@
 import numpy as np
-from config import initialize
+from config import initialize, data_dir
 import sys
 import os
 
@@ -8,10 +8,14 @@ sys.path.append(root)
 
 from commons.pce_micp_solver import PCEMICPSolver
 
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
+
 def main(scene):
 
     N = 35
-    dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
+    
     print("---------------------------------------------------------")
     print('Initializing...')
     print("---------------------------------------------------------")
@@ -69,21 +73,20 @@ def main(scene):
         solver.agents['pedes'].apply_control(i, solver.agents['pedes'].useq[:, i])
 
     # Save data
-    np.save(dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-    np.save(dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-    np.save(dir + '/xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
-    np.save(dir + '/run_time_' + str(scene) + '.npy', runtime)
+    np.save(data_dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
+    np.save(data_dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
+    np.save(data_dir + '/xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
+    np.save(data_dir + '/run_time_' + str(scene) + '.npy', runtime)
 
     print("---------------------------------------------------------")
-    print('Data saved to ' + dir)
+    print('Data saved to ' + data_dir)
     print("---------------------------------------------------------")
 
 
 if __name__ == "__main__":
 
     # First of first, choose the mode
-    intent = 1    # Select the intent of OV: 
-                # 0 for switching-lane
-                # 1 for slowing-down
-                # 2 for speeding-up
-    main(intent)
+    scene = 0    # Select the scenario: 
+                # 0 for no awareness
+                # 1 for intention-aware
+    main(scene)
