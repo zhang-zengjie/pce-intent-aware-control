@@ -1,19 +1,16 @@
 import numpy as np
-from config import initialize
-import sys
+from config import initialize, data_dir
 import os
-
-root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.append(root)
-
 from commons.pce_micp_solver import PCEMICPSolver
+
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
 
 def main(scene):    
 
     N = 15      # Control horizon
     
-    dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))    # The directory to save data
-
     print("---------------------------------------------------------")
     print('Initializing...')
     print("---------------------------------------------------------")
@@ -64,19 +61,21 @@ def main(scene):
         solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
 
     # Save data
-    np.save(dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-    np.save(dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-    np.save(dir + '/run_time_' + str(scene) + '.npy', runtime)
+    np.save(data_dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
+    np.save(data_dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
+    np.save(data_dir + '/run_time_' + str(scene) + '.npy', runtime)
 
     print("---------------------------------------------------------")
-    print('Data saved to ' + dir)
+    print('Data saved to ' + data_dir)
     print("---------------------------------------------------------")
+
+    return solver.agents
 
 
 if __name__ == "__main__":
 
     # First of first, choose the mode
-    intent = 1    # Select the intent of OV: 
+    intent = 2    # Select the intent of OV: 
                 # 0 for switching-lane
                 # 1 for slowing-down
                 # 2 for speeding-up

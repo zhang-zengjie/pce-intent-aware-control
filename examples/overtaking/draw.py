@@ -1,12 +1,11 @@
 import numpy as np
-from config import initialize, visualize, record, complexity
-import os
+from config import initialize, visualize, record, complexity, data_dir
+
 
 def main(scene):
 
     N = 15      # Control horizon
-    dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
-
+    
     print("---------------------------------------------------------")
     print('Initializing...')
     print("---------------------------------------------------------")
@@ -18,15 +17,16 @@ def main(scene):
 
     # Load the data of the ego agent
     print("---------------------------------------------------------")
-    print('Loading data from' + dir)
+    print('Loading data from' + data_dir)
     print("---------------------------------------------------------")
-    xe = np.load(dir + '/xe_scene_' + str(scene) + '.npy')
+    agents['ego'].states = np.load(data_dir + '/xe_scene_' + str(scene) + '.npy')
 
-    draw(xe, agents, scene)
+    return agents
 
 
-def draw(xe, agents, scene):
+def draw(agents, scene):
 
+    xe = agents['ego'].states
     oppo = agents['oppo']
     # Perform 100 times Monte Carlo sampling for the opponent agent
     M = 100                                         # Number of Monte Carlo runs
@@ -50,14 +50,17 @@ def draw(xe, agents, scene):
 
     if False:
         # Visualize complexity analysis
-        complexity(dir)
+        complexity(data_dir)
 
 
 if __name__ == "__main__":
 
     # First of first, choose the mode
-    intent = 1    # Select the intent of OV: 
+    intent = 2    # Select the intent of OV: 
                 # 0 for switching-lane
                 # 1 for slowing-down
                 # 2 for speeding-up
-    main(intent)
+
+    agents = main(intent)
+    draw(agents, intent)
+    
