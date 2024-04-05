@@ -79,11 +79,10 @@ def main(scene):
 if __name__ == "__main__":
 
     # First of first, choose the scenario
-    scene = 0       # 0 for no awareness
+    scene = 1       # 0 for no awareness
                     # 1 for intention-aware
     # Choose the instant of the view
-    step = 20       # 16: the step to show relation with the OV
+    step = 16       # 16: the step to show relation with the OV
                     # 20: the step to show relation with the pedestrian
     agents = main(scene)
-
     draw(agents, scene, step)
