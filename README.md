@@ -1,6 +1,6 @@
-# Intent-Aware Control Facilitated by Polynomial Chaos Expansion
+# Intention-Aware Control Facilitated by Polynomial Chaos Expansion
 
-**Author:** Zengjie Zhang (z.zhang3@tue.nl)
+The benchmark of using polynomial chaos expansion (PCE) to solve intention-aware control of autonomous vehicles.
 
 ## Dependencies
 
