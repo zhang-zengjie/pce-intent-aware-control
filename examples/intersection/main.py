@@ -1,5 +1,7 @@
 import numpy as np
 from config import initialize
+from draw import draw
+import matplotlib.pyplot as plt
 import sys
 import os
 
@@ -11,7 +13,7 @@ from commons.pce_micp_solver import PCEMICPSolver
 def main(scene):
 
     N = 35
-    dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
+    dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
     print("---------------------------------------------------------")
     print('Initializing...')
     print("---------------------------------------------------------")
@@ -68,15 +70,7 @@ def main(scene):
         solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
         solver.agents['pedes'].apply_control(i, solver.agents['pedes'].useq[:, i])
 
-    # Save data
-    np.save(dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-    np.save(dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-    np.save(dir + '/xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
-    np.save(dir + '/run_time_' + str(scene) + '.npy', runtime)
-
-    print("---------------------------------------------------------")
-    print('Data saved to ' + dir)
-    print("---------------------------------------------------------")
+    return solver.agents
 
 
 if __name__ == "__main__":
@@ -86,4 +80,10 @@ if __name__ == "__main__":
                 # 0 for switching-lane
                 # 1 for slowing-down
                 # 2 for speeding-up
-    main(intent)
+    
+    agents = main(intent)
+    xe = agents['ego'].states
+    cursors = [16, 20]
+
+    draw(xe, agents, cursors)
+    plt.savefig(dir + '/intersection_' + str(intent) + '.svg', bbox_inches='tight', pad_inches=0.1, transparent=True)
