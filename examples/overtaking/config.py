@@ -173,7 +173,7 @@ def visualize(agents, xe, xo, mode):
                            fill=True, facecolor=c_ego(i*0.8/T), zorder=10+M*T+i*M+xe[1, i]))
     
     plt.legend([pev, pov], ['EV', 'OV'], loc=legend_loc, fontsize="8", ncol=2)
-    plt.savefig(data_dir + '/overtaking_' + str(mode) + '.svg', bbox_inches='tight', pad_inches=0.1, transparent=True)
+    plt.savefig(os.path.join(data_dir, 'overtaking_' + str(mode) + '.svg'), bbox_inches='tight', pad_inches=0.1, transparent=True)
     plt.show()
 
 
@@ -183,7 +183,7 @@ def record(agents, xe, xo, mode, fps=12):
     M = xo.shape[0]
     Ts = agents['ego'].dt
     TT = T * fps * Ts
-    dir = 'media/'
+    dir = 'media'
 
     ts = np.arange(0, T)
     tau = np.arange(0, T, 1/(fps*Ts))
@@ -195,7 +195,6 @@ def record(agents, xe, xo, mode, fps=12):
 
     metadata = dict(title='Movie', artist='Zengjie Zhang')
     writer = FFMpegWriter(fps=fps, metadata=metadata)
-    plt.rcParams['animation.ffmpeg_path'] = 'C:\\Program Files (x86)\\ffmpeg-full_build\\bin\\ffmpeg.exe'
     
     fig = plt.figure(figsize=(8, 3.85))
     ax = fig.add_subplot(1, 1, 1)
@@ -222,7 +221,7 @@ def record(agents, xe, xo, mode, fps=12):
     c_ego = plt.get_cmap('Reds')
     c_oppo = plt.get_cmap('Blues')
 
-    with writer.saving(fig, dir + 'overtaking_mode_' + str(mode) + '.mp4', 300):
+    with writer.saving(fig, 'overtaking_mode_' + str(mode) + '.mp4', 300):
 
         # Plot the trajectory of the ego vehicle (EV)
         for i, t in enumerate(tau):
@@ -253,17 +252,17 @@ def record(agents, xe, xo, mode, fps=12):
                 tov[j].remove()
 
     print("---------------------------------------------------------")
-    print('Video saved to ' + dir)
+    print('Video saved.')
     print("---------------------------------------------------------")
 
 
 def complexity(dir):
 
-    runtime = [np.load(dir + 'run_time_' + str(scene) + '.npy') for scene in range(3)]
+    runtime = [np.load(os.path.join(dir, 'run_time_' + str(scene) + '.npy')) for scene in range(3)]
     T = len(runtime[0])
     ts = np.arange(0, T)
 
-    fig = plt.figure(figsize=(5, 2.5))
+    fig = plt.figure(figsize=(5, 2))
     ax = plt.axes()
 
     plt.rcParams['pdf.fonttype'] = 42
@@ -273,8 +272,9 @@ def complexity(dir):
     s2 = plt.scatter(ts, runtime[2], marker='*', s=60, facecolors='none', edgecolors='#003300', linewidths=1.5)
 
     plt.xlabel('Steps', fontsize="11")
-    plt.ylabel('Computation time (s)', fontsize="11")
-    plt.legend([s1, s2, s0], ['slow down', 'speed up', 'switch lane'], loc=(0.62, 0.55), fontsize="11", ncol=1)
+    plt.ylabel('Time (s)', fontsize="11")
+    plt.legend([s1, s2, s0], ['slow down', 'speed up', 'switch lane'], fontsize="10")
+    # plt.legend([s1, s2, s0], ['slow down', 'speed up', 'switch lane'], loc=(0.62, 0.55), fontsize="10", ncol=3)
     plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.12)
     fig.tight_layout()
     plt.grid(linestyle='-.')

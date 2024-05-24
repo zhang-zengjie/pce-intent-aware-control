@@ -1,5 +1,6 @@
 import numpy as np
 from config import initialize, visualize, record, complexity, data_dir
+import os
 
 
 def main(scene):
@@ -17,7 +18,7 @@ def main(scene):
     print("---------------------------------------------------------")
     print('Loading data from ' + data_dir)
     print("---------------------------------------------------------")
-    agents['ego'].states = np.load(data_dir + '/xe_scene_' + str(scene) + '.npy')
+    agents['ego'].states = np.load(os.path.join(data_dir, 'xe_scene_' + str(scene) + '.npy'))
 
     return agents
 
@@ -45,11 +46,11 @@ def draw(agents, scene, step):
         xo[j] = agents['oppo'].states
         xp[j] = agents['pedes'].states
 
-    if True:
+    if False:
         # Visualize the result
         visualize(agents, xe, xo, xp, scene, step)
 
-    if False:
+    if True:
         # Record the video
         record(agents, xe, xo, xp, scene, fps=24)
 
