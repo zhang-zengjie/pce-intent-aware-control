@@ -73,10 +73,10 @@ def main(scene):
         solver.agents['pedes'].apply_control(i, solver.agents['pedes'].useq[:, i])
 
     # Save data
-    np.save(data_dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-    np.save(data_dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-    np.save(data_dir + '/xp_scene_' + str(scene) + '.npy', solver.agents['pedes'].pce_coefs)
-    np.save(data_dir + '/run_time_' + str(scene) + '.npy', runtime)
+    np.save(os.path.join(data_dir, 'xe_scene_' + str(scene) + '.npy'), solver.agents['ego'].states)
+    np.save(os.path.join(data_dir, 'xo_scene_' + str(scene) + '.npy'), solver.agents['oppo'].pce_coefs)
+    np.save(os.path.join(data_dir, 'xp_scene_' + str(scene) + '.npy'), solver.agents['pedes'].pce_coefs)
+    np.save(os.path.join(data_dir, 'run_time_' + str(scene) + '.npy'), runtime)
 
     print("---------------------------------------------------------")
     print('Data saved to ' + data_dir)
@@ -86,7 +86,8 @@ def main(scene):
 if __name__ == "__main__":
 
     # First of first, choose the mode
-    scene = 0    # Select the scenario: 
+    for scene in (0, 1):
+                # The scenario: 
                 # 0 for no awareness
                 # 1 for intention-aware
-    main(scene)
+        main(scene)

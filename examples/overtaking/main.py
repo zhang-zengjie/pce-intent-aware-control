@@ -61,9 +61,9 @@ def main(scene):
         solver.agents['oppo'].apply_control(i, solver.agents['oppo'].useq[:, i])
 
     # Save data
-    np.save(data_dir + '/xe_scene_' + str(scene) + '.npy', solver.agents['ego'].states)
-    np.save(data_dir + '/xo_scene_' + str(scene) + '.npy', solver.agents['oppo'].pce_coefs)
-    np.save(data_dir + '/run_time_' + str(scene) + '.npy', runtime)
+    np.save(os.path.join(data_dir, 'xe_scene_' + str(scene) + '.npy'), solver.agents['ego'].states)
+    np.save(os.path.join(data_dir, 'xo_scene_' + str(scene) + '.npy'), solver.agents['oppo'].pce_coefs)
+    np.save(os.path.join(data_dir, 'run_time_' + str(scene) + '.npy'), runtime)
 
     print("---------------------------------------------------------")
     print('Data saved to ' + data_dir)
@@ -75,8 +75,9 @@ def main(scene):
 if __name__ == "__main__":
 
     # First of first, choose the mode
-    intent = 2    # Select the intent of OV: 
+    for intent in (0, 1, 2):
+                # The intent of OV: 
                 # 0 for switching-lane
                 # 1 for slowing-down
                 # 2 for speeding-up
-    main(intent)
+        main(intent)

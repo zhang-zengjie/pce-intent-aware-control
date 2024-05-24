@@ -223,7 +223,7 @@ def visualize(agents, xe, xo, xp, mode, cursor):
                                 edgecolor='black', facecolor=c_pedes((cursor/T)**1), zorder=20-xp[j, 0, cursor]))
 
     plt.legend([pev, pov, ppd], ['Ego vehicle', 'Opponent vehicle', 'Pedestrian'], loc=(0.03, 0.03), fontsize="10", ncol=1)
-    plt.savefig(data_dir + '/intersection_' + str(mode) + '_step_' + str(cursor) + '.svg', bbox_inches='tight', pad_inches=0.1, transparent=True)
+    plt.savefig(os.path.join(data_dir, 'intersection_' + str(mode) + '_step_' + str(cursor) + '.svg'), bbox_inches='tight', pad_inches=0.1, transparent=True)
     plt.show()
 
 
@@ -233,14 +233,13 @@ def record(agents, xe, xo, xp, mode, fps=12):
     M = xo.shape[0]
     Ts = agents['ego'].dt
     TT = T * fps * Ts
-    dir = 'media/'
+    dir = 'media'
 
     x_lim = [-3*lw, 3*lw]
     y_lim = [-3*lw, 3*lw]
 
     fig = plt.figure(figsize=(6, 5.7))
     ax = plt.axes()
-    plt.rcParams['animation.ffmpeg_path'] = 'C:\\Program Files (x86)\\ffmpeg-full_build\\bin\\ffmpeg.exe'
 
     ts = np.arange(0, T)
     tau = np.arange(0, T, 1/(fps*Ts))
@@ -293,7 +292,7 @@ def record(agents, xe, xo, xp, mode, fps=12):
     writer = FFMpegWriter(fps=fps, metadata=metadata)
 
     # Plot the sampled trajectories of the obstacle vehicle (OV) 
-    with writer.saving(fig, dir + 'intersection_scene_' + str(mode) + '.mp4', 300):
+    with writer.saving(fig, 'intersection_scene_' + str(mode) + '.mp4', 300):
 
         for i, t in enumerate(tau):
         
@@ -323,17 +322,17 @@ def record(agents, xe, xo, xp, mode, fps=12):
                 ppd[j].remove()
                 tov[j].remove()
     print("---------------------------------------------------------")
-    print('Video saved to ' + dir)
+    print('Video saved.')
     print("---------------------------------------------------------")
 
 
 def complexity(dir):
 
-    runtime = [np.load(dir + 'run_time_' + str(scene) + '.npy') for scene in range(2)]
+    runtime = [np.load(os.path.join(dir, 'run_time_' + str(scene) + '.npy')) for scene in range(2)]
     T = len(runtime[0])
     ts = np.arange(0, T)
 
-    fig = plt.figure(figsize=(5, 2.5))
+    fig = plt.figure(figsize=(5, 2))
     ax = plt.axes()
 
     plt.rcParams['pdf.fonttype'] = 42
@@ -341,8 +340,8 @@ def complexity(dir):
     s0 = plt.scatter(ts, runtime[0], marker='o', s=60, color='#3333ff')
     s1 = plt.scatter(ts, runtime[1], marker='v', s=60, color='#ff0000')
     plt.xlabel('Steps', fontsize="12")
-    plt.ylabel('Computation time (s)', fontsize="12")
-    plt.legend([s0, s1], ['no awareness', 'intention aware'], loc=(0.5, 0.6), fontsize="11", ncol=1)
+    plt.ylabel('Time (s)', fontsize="12")
+    plt.legend([s0, s1], ['no awareness', 'intention aware'], fontsize="10")
     plt.subplots_adjust(left=0.16, right=0.97, top=0.97, bottom=0.12)
     fig.tight_layout()
     plt.grid(linestyle='-.')

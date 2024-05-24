@@ -1,5 +1,6 @@
 import numpy as np
 from config import initialize, visualize, record, complexity, data_dir
+import os
 
 
 def main(scene):
@@ -19,7 +20,7 @@ def main(scene):
     print("---------------------------------------------------------")
     print('Loading data from' + data_dir)
     print("---------------------------------------------------------")
-    agents['ego'].states = np.load(data_dir + '/xe_scene_' + str(scene) + '.npy')
+    agents['ego'].states = np.load(os.path.join(data_dir, 'xe_scene_' + str(scene) + '.npy'))
 
     return agents
 
@@ -40,11 +41,11 @@ def draw(agents, scene):
         oppo.predict(0, N)
         xo[j] = oppo.states
 
-    if True:
+    if False:
         # Visualize the result
         visualize(agents, xe[:, :N-1], xo[:, :, :N-1], scene)
 
-    if False:
+    if True:
         # Record the video
         record(agents, xe[:, :N-1], xo[:, :, :N-1], scene, fps=24)
 
@@ -56,7 +57,7 @@ def draw(agents, scene):
 if __name__ == "__main__":
 
     # First of first, choose the mode
-    intent = 2    # Select the intent of OV: 
+    intent = 1    # Select the intent of OV: 
                 # 0 for switching-lane
                 # 1 for slowing-down
                 # 2 for speeding-up

@@ -64,6 +64,10 @@ pip install chaospy
 - Rendering constraints may take up to 1 to 2 minutes, depending on the computational performance;
 - Plotted figures automatically saved in the `data` subfolder.
 
+## Special visualization functions
+
+If using `config/record` function, be sure to install `ffmpeg` first and make sure its installation folder shows up in the `PATH` environmental variable.
+
 ## License
 
 This project is with a BSD-3 license, refer to `LICENSE` for details.
